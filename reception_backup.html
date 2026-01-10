@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Cashier - Payment System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    /* HEADER */
+    .header {
+      background: linear-gradient(135deg, #1a1f36 0%, #2d3561 100%);
+      color: white;
+      padding: 1.5rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-content {
+      max-width: 1600px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+
+    .header-time {
+      font-size: 0.95rem;
+      opacity: 0.9;
+    }
+
+    /* MAIN LAYOUT */
+    .main-wrapper {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+      display: grid;
+      grid-template-columns: 1fr 500px;
+      gap: 2rem;
+      min-height: calc(100vh - 100px);
+    }
+
+    /* TABLE GRID */
+    .tables-section {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .section-card {
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+
+    .section-header {
+      background: linear-gradient(135deg, #1a1f36 0%, #2d3561 100%);
+      color: white;
+      padding: 1.2rem 1.5rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .table-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 1rem;
+      padding: 1.5rem;
+    }
+
+    .btn-table {
+      aspect-ratio: 1;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: #f0f2f5;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-table::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(255,255,255,0.1);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .btn-table:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+
+    .btn-table-status {
+      font-size: 0.7rem;
+      opacity: 0.8;
+      margin-top: 0.2rem;
+    }
+
+    /* Available & Ordered Colors */
+    .btn-table.available {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);
+    }
+
+    .btn-table.ordered {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25);
+    }
+
+    .btn-table.selected {
+      border: 3px solid #1a1f36;
+      box-shadow: 0 0 0 4px rgba(26, 31, 54, 0.2);
+    }
+
+    /* CASHIER PANEL - RIGHT SIDEBAR */
+    .cashier-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      height: fit-content;
+      position: sticky;
+      top: 100px;
+    }
+
+    .panel-card {
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+
+    /* ORDER DETAILS */
+    .order-details {
+      padding: 1.5rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .order-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .info-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.4rem;
+    }
+
+    .info-value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #1a1f36;
+    }
+
+    /* ITEMS LIST */
+    .items-list {
+      max-height: 280px;
+      overflow-y: auto;
+      padding: 1rem;
+      background: #f9fafb;
+    }
+
+    .items-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .items-list::-webkit-scrollbar-track {
+      background: #f0f0f0;
+      border-radius: 10px;
+    }
+
+    .items-list::-webkit-scrollbar-thumb {
+      background: #d0d0d0;
+      border-radius: 10px;
+    }
+
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.8rem;
+      background: white;
+      border-radius: 8px;
+      margin-bottom: 0.6rem;
+      border-left: 3px solid #1a1f36;
+      font-size: 0.9rem;
+    }
+
+    .item-name {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .item-qty {
+      font-size: 0.85rem;
+      color: #666;
+      margin: 0 0.8rem;
+    }
+
+    .item-price {
+      font-weight: 700;
+      color: #10b981;
+      min-width: 60px;
+      text-align: right;
+    }
+
+    .items-empty {
+      text-align: center;
+      color: #999;
+      padding: 2rem 1rem;
+      font-style: italic;
+    }
+
+    /* TOTALS SECTION */
+    .totals-section {
+      padding: 1.5rem;
+      border-top: 1px solid #f0f0f0;
+      background: linear-gradient(135deg, #fafbfc 0%, #f3f4f6 100%);
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.8rem;
+      font-size: 0.95rem;
+    }
+
+    .total-label {
+      color: #666;
+      font-weight: 500;
+    }
+
+    .total-value {
+      font-weight: 700;
+      color: #333;
+    }
+
+    .divider {
+      height: 1px;
+      background: #e0e0e0;
+      margin: 0.8rem 0;
+    }
+
+    .grand-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background: linear-gradient(135deg, #1a1f36 0%, #2d3561 100%);
+      border-radius: 10px;
+      color: white;
+    }
+
+    .grand-total-label {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .grand-total-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+
+    /* PAYMENT SECTION */
+    .payment-section {
+      padding: 1.5rem;
+    }
+
+    .payment-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.8rem;
+      display: block;
+    }
+
+    .payment-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn-payment {
+      padding: 1rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      background: white;
+      color: #333;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 0.95rem;
+    }
+
+    .btn-payment:hover {
+      border-color: #1a1f36;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .btn-payment.active {
+      background: linear-gradient(135deg, #1a1f36 0%, #2d3561 100%);
+      color: white;
+      border-color: transparent;
+      box-shadow: 0 4px 15px rgba(26, 31, 54, 0.3);
+    }
+
+    .selected-payment {
+      background: #f0f4ff;
+      border: 2px solid #1a1f36;
+      border-radius: 8px;
+      padding: 0.8rem;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: #1a1f36;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    /* ACTION BUTTONS */
+    .action-buttons {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.8rem;
+    }
+
+    .btn-action {
+      padding: 1rem;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 1rem;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-complete {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-complete:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-complete:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* RECENT PAYMENTS */
+    .recent-payments {
+      padding: 1.5rem;
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .recent-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .payments-table {
+      font-size: 0.85rem;
+    }
+
+    .payments-table thead {
+      background: #f0f2f5;
+    }
+
+    .payments-table th {
+      font-weight: 700;
+      color: #1a1f36;
+      border: none;
+      padding: 0.8rem;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .payments-table td {
+      padding: 0.8rem;
+      border: none;
+      border-bottom: 1px solid #e9ecef;
+      color: #555;
+    }
+
+    .payment-status {
+      display: inline-block;
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+
+    .status-completed {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .status-cash {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .status-qr {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    /* LOGOUT */
+    .btn-logout {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+      transition: all 0.3s ease;
+      z-index: 200;
+    }
+
+    .btn-logout:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 1200px) {
+      .main-wrapper {
+        grid-template-columns: 1fr;
+      }
+      .cashier-panel {
+        position: static;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .table-grid {
+        grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+        gap: 0.8rem;
+        padding: 1rem;
+      }
+      .btn-table {
+        font-size: 0.85rem;
+      }
+    }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #999;
+    }
+
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-content">
+      <div>
+        <h1>Cashier - Payment System</h1>
+      </div>
+      <div class="header-time" id="currentTime"></div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-wrapper">
+    <!-- LEFT: TABLES -->
+    <div class="tables-section">
+      <div class="section-card">
+        <div class="section-header">Tables & Orders</div>
+        <div class="table-grid" id="tableGrid"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: CASHIER PANEL -->
+    <div class="cashier-panel">
+      <!-- ORDER DETAILS CARD -->
+      <div class="panel-card">
+        <div class="order-details" id="orderDetailsSection">
+          <div class="empty-state">
+            <div class="empty-state-icon"></div>
+            <p>Select a table with an order</p>
+          </div>
+        </div>
+
+        <div id="orderContent" style="display: none;">
+          <!-- ORDER INFO -->
+          <div class="order-info">
+            <div class="info-item">
+              <span class="info-label">Order ID</span>
+              <span class="info-value" id="orderId">-</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Table</span>
+              <span class="info-value" id="tableInfo">-</span>
+            </div>
+          </div>
+
+          <!-- ITEMS LIST -->
+          <div class="items-list" id="itemsList">
+            <div class="items-empty">No items</div>
+          </div>
+
+          <!-- TOTALS -->
+          <div class="totals-section">
+            <div class="total-row">
+              <span class="total-label">Subtotal</span>
+              <span class="total-value">RM <span id="subtotal">0.00</span></span>
+            </div>
+            <div class="total-row">
+              <span class="total-label">Service (10%)</span>
+              <span class="total-value">RM <span id="service">0.00</span></span>
+            </div>
+            <div class="divider"></div>
+            <div class="grand-total">
+              <span class="grand-total-label">Total Amount</span>
+              <span class="grand-total-value">RM <span id="totalAmount">0.00</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAYMENT CARD -->
+      <div class="panel-card">
+        <div class="payment-section" id="paymentSection" style="display: none;">
+          <span class="payment-label">Payment Method</span>
+          <div class="payment-buttons">
+            <button class="btn-payment" onclick="selectPaymentMethod('Cash')">Cash</button>
+            <button class="btn-payment" onclick="selectPaymentMethod('QR')">QR Code</button>
+          </div>
+          <div class="selected-payment" id="selectedPayment" style="display: none;"></div>
+          <button class="btn-action btn-complete" id="completeBtn" onclick="completePayment()">Complete Payment</button>
+        </div>
+      </div>
+
+      <!-- RECENT PAYMENTS CARD -->
+      <div class="panel-card">
+        <div class="recent-payments">
+          <span class="recent-label">Recent Payments</span>
+          <div class="table-responsive">
+            <table class="table table-sm payments-table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Amount</th>
+                  <th>Method</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody id="paymentsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGOUT BUTTON -->
+  <button class="btn-logout" id="logoutBtn" title="Logout">Logout</button>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    import {
+  getFirestore, doc, getDoc, collection, onSnapshot, updateDoc, serverTimestamp,
+  query, where,setDoc, orderBy, limit, getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+
+    // Firebase
+     const firebaseConfig = {
+  apiKey: "AIzaSyAJLpR4IgLaTYApv5t5Xx4LjtKey4hvk2A",
+  authDomain: "kedai-bihun-selambak.firebaseapp.com",
+  projectId: "kedai-bihun-selambak",
+  storageBucket: "kedai-bihun-selambak.firebasestorage.app",
+  messagingSenderId: "912675316718",
+  appId: "1:912675316718:web:9e4c950d1e1287c0af64ff",
+  measurementId: "G-EWZ162W839"
+};
+
+
+
+    const app  = initializeApp(firebaseConfig);
+    const db   = getFirestore(app);
+    const auth = getAuth(app);
+
+    // 🔑 SAME restaurant everywhere
+    const restaurantId = "kedai_makan";
+    const rcol = (name) => collection(db, `restaurants/${restaurantId}/${name}`);
+    const rdoc = (name, id) => doc(db, `restaurants/${restaurantId}/${name}`, String(id));
+
+    // UI refs - Updated for new layout
+    const tableGrid        = document.getElementById("tableGrid");
+    const orderDetailsSection = document.getElementById("orderDetailsSection");
+    const orderContent = document.getElementById("orderContent");
+    const paymentSection = document.getElementById("paymentSection");
+    const completeBtn      = document.getElementById("completeBtn");
+
+    // Helper: Update current time
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dateStr = now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+      document.getElementById('currentTime').textContent = `${timeStr} • ${dateStr}`;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // state
+    let currentOrderId = null;
+    let currentTableId = null;      
+    let currentTableNumber = null;
+    let selectedPaymentMethod = null;
+    let isProcessingClick = false; // Prevent re-renders during click
+
+    function goLogin(msg){ if (msg) alert(msg); window.location.href = "index.html"; }
+
+    // Auth guard: receptionist only
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return goLogin("Please sign in first.");
+      try {
+        const snap = await getDoc(doc(db, "roles", user.uid));
+        if (!snap.exists() || String(snap.data().role||"").toLowerCase() !== "receptionist") {
+          await signOut(auth); return goLogin("Access denied. Receptionist only.");
+        }
+      } catch (e) {
+        console.error(e); await signOut(auth); goLogin("Error verifying role.");
+      }
+    });
+
+    
+    // ===== Tables live =====
+let tablesRenderTimeout;
+const tablesQ = rcol("tables");
+    onSnapshot(tablesQ, (snap) => {
+      // Skip render if we're currently processing a click
+      if (isProcessingClick) return;
+      
+      // Debounce renders to prevent rapid DOM rebuilds during clicks
+      clearTimeout(tablesRenderTimeout);
+      tablesRenderTimeout = setTimeout(() => {
+        const tables = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+        renderTables(sortTablesNatural(tables));
+        
+        // Restore selected state if a table was selected
+        if (currentTableId) {
+          const selectedBtn = document.querySelector(`[data-table-id="${currentTableId}"]`);
+          if (selectedBtn) {
+            selectedBtn.classList.add("selected");
+          }
+        }
+      }, 300);
+    });
+function isBungkusDoc(t){
+  return t?.type === 'bungkus'
+      || /^bungkus[- ]?\d+$/i.test(String(t?.id || ''))
+      || /^Bungkus\s*\d+$/i.test(String(t?.name || ''));
+}
+
+function sortTablesNatural(list){
+  function key(t){
+    const label = String(t.name || (t.number!=null?`T${t.number}`:t.id));
+    // groups: 0 = T1..Tn, 1 = 1..n, 2 = B1..Bn, 3 = others
+    let grp = 3, num = 0;
+    const mT = /^T(\d+)$/i.exec(label);
+    const mN = /^(\d+)$/.exec(label);
+    const mB = /^B(ungkus)?\s*(\d+)$/i.exec(label);
+    if (mT){ grp = 0; num = parseInt(mT[1],10); }
+    else if (mN){ grp = 1; num = parseInt(mN[1],10); }
+    else if (mB){ grp = 2; num = parseInt(mB[2],10); }
+    return [grp, num, label.toUpperCase()];
+  }
+  return [...list].sort((a,b)=>{const A=key(a),B=key(b);return A[0]-B[0]||A[1]-B[1]||A[2].localeCompare(B[2]);});
+}
+
+
+
+// Live "recent payments" view: last 25 completed orders
+// Recent Payments: last 25 by completion time (no composite index needed)
+const paymentsQ = query(
+  rcol("orders"),
+  orderBy("completedAt", "desc"),
+  limit(25)
+);
+
+onSnapshot(
+  paymentsQ,
+  (snap) => {
+    const tbody = document.getElementById("paymentsTableBody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+snap.forEach(docSnap => {
+  const o = docSnap.data();
+
+  if (o.status !== "completed") return;
+
+  const when = o.completedAt?.toDate?.() ? o.completedAt.toDate() : null;
+  const timeStr = when
+    ? when.toLocaleString([], { hour: "2-digit", minute: "2-digit" }) +
+      " • " + when.toLocaleDateString()
+    : "";
+
+const tableName = o.table || (o.tableNumber ? `T${o.tableNumber}` : "?");
+
+const orderId = docSnap.id;
+const amount = (Number(o.total) || 0).toFixed(2);
+const methodBadge = o.payment === "QR"
+  ? `<span class="badge text-bg-primary">QR</span>`
+  : `<span class="badge text-bg-success">Cash</span>`;
+
+tbody.innerHTML += `
+  <tr>
+    <td><code style="font-size: 0.75rem;">${orderId}</code></td>
+    <td><strong>${tableName}</strong></td>
+    <td>${amount}</td>
+    <td>${methodBadge}</td>
+    <td>${timeStr}</td>
+    <td><button class="btn btn-sm btn-outline-primary" onclick="showOrderItems('${orderId}')">View</button></td>
+  </tr>`;
+
+
+});
+
+  },
+  (err) => {
+    console.warn("payments onSnapshot error:", err);
+  }
+);
+
+
+
+
+
+    // Logout (floating button)
+    document.getElementById("logoutBtn")?.addEventListener("click", async () => {
+      await signOut(auth); window.location.href = "index.html";
+    });
+
+
+    // Update order display in right panel
+    function updateOrderDisplay(orderId, orderData) {
+      if (!orderId || !orderData) {
+        orderContent.style.display = 'none';
+        paymentSection.style.display = 'none';
+        orderDetailsSection.innerHTML = `<div class="empty-state"><div class="empty-state-icon"></div><p>Select a table with an order</p></div>`;
+        return;
+      }
+      orderContent.style.display = 'block';
+      paymentSection.style.display = 'block';
+      document.getElementById('orderId').textContent = orderId;
+      document.getElementById('tableInfo').textContent = orderData.table || (currentTableNumber ? `T${currentTableNumber}` : '-');
+      const itemsList = document.getElementById('itemsList');
+      itemsList.innerHTML = '';
+      let subtotal = 0;
+      (orderData.items || []).forEach(item => {
+        const price = Number(item.unitPrice ?? item.price ?? 0);
+        const qty = Number(item.qty) || 0;
+        const itemTotal = price * qty;
+        subtotal += itemTotal;
+        const itemRow = document.createElement('div');
+        itemRow.className = 'item-row';
+        itemRow.innerHTML = `<div class="item-name">${item.name}</div><div class="item-qty">×${qty}</div><div class="item-price">RM ${itemTotal.toFixed(2)}</div>`;
+        itemsList.appendChild(itemRow);
+      });
+      const service = subtotal * 0.1;
+      const total = subtotal + service;
+      document.getElementById('subtotal').textContent = subtotal.toFixed(2);
+      document.getElementById('service').textContent = service.toFixed(2);
+      document.getElementById('totalAmount').textContent = total.toFixed(2);
+    }
+
+function renderTables(tables) {
+  // Only rebuild if the grid is empty, otherwise update existing buttons
+  const existingButtons = Array.from(document.querySelectorAll(".btn-table"));
+  
+  if (existingButtons.length === 0) {
+    // First render - build everything
+    tableGrid.innerHTML = "";
+    tables.forEach(t => {
+      createTableButton(t);
+    });
+  } else {
+    // Update only changed buttons, preserve selected state
+    const selectedId = currentTableId;
+    const tableMap = new Map(tables.map(t => [t.id, t]));
+    
+    tables.forEach(t => {
+      let btn = document.querySelector(`[data-table-id="${t.id}"]`);
+      if (!btn) {
+        // New table, add it
+        createTableButton(t);
+      } else {
+        // Update status if changed
+        const oldStatus = btn.querySelector(".btn-table-status")?.textContent.trim() || "";
+        const newStatus = t.activeOrderId ? "Order" : "Ready";
+        if (oldStatus !== newStatus) {
+          btn.className = `btn-table ${t.activeOrderId ? "ordered" : "available"}`;
+          btn.innerHTML = `${t.name || `T${t.number}`}<div class="btn-table-status">${newStatus}</div>`;
+        }
+      }
+    });
+    
+    // Re-apply selected class after updates
+    if (selectedId) {
+      const selectedBtn = document.querySelector(`[data-table-id="${selectedId}"]`);
+      if (selectedBtn) {
+        selectedBtn.classList.add("selected");
+      }
+    }
+  }
+}
+
+function createTableButton(t) {
+  const btn = document.createElement("button");
+  btn.className = `btn-table ${t.activeOrderId ? "ordered" : "available"}`;
+  btn.setAttribute("data-table-id", t.id);
+  const status = t.activeOrderId ? "Order" : "Ready";
+  btn.innerHTML = `${t.name || `T${t.number}`}<div class="btn-table-status">${status}</div>`;
+  btn.onclick = async () => {
+    isProcessingClick = true;
+    try {
+      document.querySelectorAll(".btn-table.selected").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      await loadTable(t);
+    } finally {
+      isProcessingClick = false;
+    }
+  };
+  tableGrid.appendChild(btn);
+}
+
+    // ===== Load selected table's active order =====
+async function loadTable(t){
+  currentTableId = t.id;
+  currentTableNumber = t.number;
+  currentOrderId = null;
+  selectedPaymentMethod = null;
+  document.querySelectorAll('.btn-payment').forEach(b => b.classList.remove('active'));
+  document.getElementById('selectedPayment').style.display = 'none';
+  
+  let foundOrder = null;
+  if (t.activeOrderId) {
+    const snap = await getDoc(rdoc("orders", t.activeOrderId));
+    if (snap.exists()) {
+      foundOrder = { id: snap.id, ...snap.data() };
+    }
+  }
+  if (foundOrder) {
+    currentOrderId = foundOrder.id;
+    updateOrderDisplay(foundOrder.id, foundOrder);
+  } else {
+    updateOrderDisplay(null, null);
+  }
+}
+
+document.getElementById('addItemBtn')?.addEventListener('click', () => {
+  if (!currentTableId) { 
+    alert("Select a table first."); 
+    return; 
+  }
+  document.getElementById('ai_name').value = "";
+  document.getElementById('ai_price').value = "";
+  document.getElementById('ai_qty').value   = "1";
+  document.getElementById('ai_note').value  = "";
+  new bootstrap.Modal(document.getElementById('addItemModal')).show();
+});
+
+
+// add item to Firestore
+document.getElementById('ai_addBtn')?.addEventListener('click', async () => {
+  const name = document.getElementById('ai_name').value.trim();
+  const price = parseFloat(document.getElementById('ai_price').value);
+  const qty   = parseInt(document.getElementById('ai_qty').value, 10) || 1;
+  const note  = document.getElementById('ai_note').value.trim();
+  if (!name || isNaN(price) || price < 0) { alert("Fill name and a valid price."); return; }
+
+try {
+    // If no active order yet, create one now
+    if (!currentOrderId) {
+      const counterRef = rdoc("meta", "orderCounter");
+      const counterSnap = await getDoc(counterRef);
+      const next = (counterSnap.exists() ? (counterSnap.data().count || 0) : 0) + 1;
+      const newOrderId = `ORD-${String(next).padStart(5,"0")}`;
+
+      await setDoc(rdoc("orders", newOrderId), {
+        table: sidebarTable.textContent,
+        tableNumber: currentTableNumber ?? null,
+        status: "active",
+        items: [],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      await updateDoc(counterRef, { count: next });
+      await updateDoc(rdoc("tables", currentTableId), {
+        activeOrderId: newOrderId,
+        status: "occupied",
+        updatedAt: serverTimestamp()
+      });
+
+      currentOrderId = newOrderId; // now we have an order
+    }
+
+    // Now add/merge the item
+    const snap = await getDoc(rdoc("orders", currentOrderId));
+    const items = Array.isArray(snap.data()?.items) ? [...snap.data().items] : [];
+    const i = items.findIndex(it =>
+      it.name === name &&
+      Number(it.unitPrice ?? it.price) === price &&
+      (it.note || "") === note
+    );
+    if (i >= 0) {
+      items[i] = { ...items[i], qty: Number(items[i].qty || 0) + qty };
+    } else {
+      items.push({ name, unitPrice: price, qty, note });
+    }
+
+    await updateDoc(rdoc("orders", currentOrderId), { items, updatedAt: serverTimestamp() });
+
+    bootstrap.Modal.getInstance(document.getElementById('addItemModal')).hide();
+    // reload sidebar to reflect the new items
+    loadTable({ id: currentTableId, number: currentTableNumber, name: sidebarTable.textContent, activeOrderId: currentOrderId });
+  } catch (e) {
+    alert("Failed to add item: " + e.message);
+  }
+});
+
+window.showOrderItems = async function(orderId) {
+  try {
+    const snap = await getDoc(rdoc("orders", orderId));
+    if (!snap.exists()) return alert("Order not found.");
+
+    const order = snap.data();
+    const list = document.getElementById("orderItemsList");
+    const modalId = document.getElementById("orderItemsModalId");
+
+    modalId.textContent = orderId;
+    list.innerHTML = "";
+
+    (order.items || []).forEach(it => {
+      const itemText = `${it.qty || 1} × ${it.name || "-"} — RM ${(Number(it.unitPrice || 0) * (it.qty || 1)).toFixed(2)}`;
+      const note = it.note ? `<div class="small text-muted">Note: ${it.note}</div>` : "";
+      const li = document.createElement("li");
+      li.className = "list-group-item";
+      li.innerHTML = `<div>${itemText}</div>${note}`;
+      list.appendChild(li);
+    });
+
+    new bootstrap.Modal(document.getElementById("orderItemsModal")).show();
+  } catch (e) {
+    console.error("Failed to fetch items:", e);
+    alert("Error loading order items.");
+  }
+};
+
+
+
+    // ===== Payment selection helpers (same UI you had) =====
+window.selectPaymentMethod = function (method) {
+  selectedPaymentMethod = method;
+  
+  // Update button active state
+  document.querySelectorAll('.btn-payment').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  // Show selected payment
+  const selected = document.getElementById('selectedPayment');
+  selected.style.display = 'block';
+  selected.textContent = method === 'Cash' ? 'Cash Payment' : 'QR Code Payment';
+};
+
+window.completePayment = async function() {
+  if (!currentOrderId || !selectedPaymentMethod) {
+    alert('Select payment method first');
+    return;
+  }
+  try {
+    await updateDoc(rdoc("orders", currentOrderId), {
+      status: "completed",
+      payment: selectedPaymentMethod,
+      completedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    await updateDoc(rdoc("tables", currentTableId), {
+      status: "available",
+      activeOrderId: null,
+      updatedAt: serverTimestamp()
+    });
+    alert('Payment completed successfully!');
+    selectedPaymentMethod = null;
+    
+    // Clear selection
+    document.querySelectorAll('.btn-payment').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('selectedPayment').style.display = 'none';
+    
+    // Clear selected table
+    document.querySelectorAll(".btn-table.selected").forEach(b => b.classList.remove("selected"));
+    
+    updateOrderDisplay(null, null);
+  } catch (err) {
+    console.error(err);
+    alert('Error: ' + err.message);
+  }
+};
+
+document.getElementById("confirmCashBtn")?.addEventListener("click", () => {
+  const cashInputEl = document.getElementById("customerCashInput");
+  const customerCash = parseFloat(cashInputEl.value);
+  const total = parseFloat(sidebarTotal.textContent) || 0;
+
+  if (isNaN(customerCash) || customerCash < total) {
+    alert("Customer cash is insufficient!");
+    return;
+  }
+
+  // Simpan dulu
+  cashTendered = customerCash;
+
+  // Tutup modal 'Enter Customer Cash'
+  bootstrap.Modal.getInstance(document.getElementById("cashModal"))?.hide();
+
+  // Isi nilai dalam modal confirm
+  document.getElementById("bm_cash").textContent   = customerCash.toFixed(2);
+  document.getElementById("bm_total").textContent  = total.toFixed(2);
+  document.getElementById("bm_change").textContent = (customerCash - total).toFixed(2);
+
+  // Papar modal confirm/balance
+  new bootstrap.Modal(document.getElementById("balanceModal")).show();
+});
+
+// Tekan "Complete Order" dalam modal confirm → trigger flow sedia ada
+document.getElementById("balanceConfirmBtn")?.addEventListener("click", () => {
+  // tutup modal confirm
+  bootstrap.Modal.getInstance(document.getElementById("balanceModal"))?.hide();
+  // panggil butang sedia ada (guna handler Mark Completed anda)
+  document.getElementById("completeBtn")?.click();
+});
+
+
+    // ===== Complete order =====
+    async function markCompleted() {
+    if (!selectedTable || !paymentMethod) {
+        alert("Please select a table and payment method.");
+        return;
+    }
+
+    try {
+        // 1️⃣ Save payment record
+        await addDoc(collection(db, "restaurants", "kedai.makan", "payments"), {
+            table: selectedTable,
+            amount: totalAmount,
+            method: paymentMethod,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp() 
+        });
+
+        // 2️⃣ Reset the table to "available"
+        const tableRef = doc(db, "restaurants", "kedai.makan", "tables", selectedTable);
+        await setDoc(tableRef, {
+            status: "available",
+            order: null
+        }, { merge: true });
+
+        // 3️⃣ Clear UI
+        selectedTable = null;
+        totalAmount = 0;
+        paymentMethod = null;
+        renderUI(); // make sure your UI updates table colors + clears sidebar
+
+        alert(`Table ${selectedTable} marked as completed ✅`);
+    } catch (error) {
+        console.error("Error completing order:", error);
+        alert("Failed to complete order: " + error.message);
+    }
+}
+
+// ---- Mark Completed (handle multi-ticket tables) ----
+completeBtn.addEventListener("click", async (e) => {
+  e.preventDefault();
+
+  if (!currentTableId || !Array.isArray(window._activeOrderIdsForThisTable) || window._activeOrderIdsForThisTable.length === 0) {
+    alert("Select a table that has open tickets first.");
+    return;
+  }
+
+  const method = document.getElementById("selectedPayment").textContent.trim();
+  if (method !== "Cash" && method !== "QR") {
+    alert("Please select a payment method.");
+    return;
+  }
+
+  const grandTotal = Number(sidebarTotal.textContent) || 0;
+  if (method === "Cash") {
+    if (cashTendered == null) { alert("Enter customer cash first."); return; }
+    if (cashTendered < grandTotal) { alert("Customer cash is insufficient!"); return; }
+  }
+
+  try {
+    // complete each open ticket for this table
+    for (const orderId of window._activeOrderIdsForThisTable) {
+      // compute the ticket's own total from its items
+      const snap = await getDoc(rdoc("orders", orderId));
+      if (!snap.exists()) continue;
+      const o = snap.data() || {};
+      const items = Array.isArray(o.items) ? o.items : [];
+      const ticketTotal = items.reduce((s, it) => {
+        const p = Number(it.unitPrice ?? it.price ?? 0);
+        const q = Number(it.qty || 0);
+        return s + p * q;
+      }, 0);
+
+      await updateDoc(rdoc("orders", orderId), {
+        status: "completed",
+        payment: method,
+        table: sidebarTable.textContent,
+        tableNumber: currentTableNumber ?? null,
+        total: ticketTotal,
+        paymentTendered: method === "Cash" ? cashTendered : null,
+        paymentChange: method === "Cash" ? (cashTendered - grandTotal) : null, // change is against grand total
+        completedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    // free the table so it turns green
+    await updateDoc(rdoc("tables", currentTableId), {
+      status: "available",
+      activeOrderId: null,
+      updatedAt: serverTimestamp()
+    });
+
+    alert("Order(s) completed.");
+    // reset UI
+    sidebarTable.textContent = "-";
+    sidebarOrderList.innerHTML = "";
+    sidebarTotal.textContent = "0.00";
+    document.getElementById("selectedPayment").textContent = "None";
+    document.getElementById("balanceDisplay").textContent = "";
+    cashTendered = null;
+    currentOrderId = null;
+    currentTableId = null;
+    currentTableNumber = null;
+    window._activeOrderIdsForThisTable = [];
+  } catch (err) {
+    console.error(err);
+    alert("Failed to complete: " + err.message);
+  }
+});
+
+sidebarOrderList.addEventListener("click", async (ev) => {
+  const btn = ev.target.closest("button[data-index][data-orderid]");
+  if (!btn) return;
+
+  const idx = parseInt(btn.dataset.index, 10);
+  const orderId = btn.dataset.orderid;
+
+  try {
+    const snap = await getDoc(rdoc("orders", orderId));
+    if (!snap.exists()) return;
+
+    const items = Array.isArray(snap.data().items) ? [...snap.data().items] : [];
+    if (!items[idx]) return;
+
+    if (!confirm(`Delete "${items[idx].name}" from ticket ${orderId}?`)) return;
+
+    items.splice(idx, 1);
+    await updateDoc(rdoc("orders", orderId), { items, updatedAt: serverTimestamp() });
+
+    // re-render table
+    await loadTable({ id: currentTableId, number: currentTableNumber, name: sidebarTable.textContent });
+  } catch (e) {
+    alert("Failed to delete item: " + e.message);
+  }
+});
+
+
+
+
+  </script>
+
+<!-- Cash Modal (required for Cash flow) -->
+<div class="modal fade" id="cashModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Enter Customer Cash</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input
+          type="number"
+          id="customerCashInput"
+          class="form-control"
+          placeholder="Enter amount"
+          min="0"
+          inputmode="decimal"
+        />
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirmCashBtn">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Confirm / Balance Modal -->
+<div class="modal fade" id="balanceModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirm Payment</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">💵 Cash received: <strong>RM <span id="bm_cash">0.00</span></strong></div>
+        <div class="mb-2">🧾 Total to pay: <strong>RM <span id="bm_total">0.00</span></strong></div>
+        <div class="mb-0">💚 Balance/Change: <strong>RM <span id="bm_change">0.00</span></strong></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
+        <button type="button" class="btn btn-primary" id="balanceConfirmBtn">Complete Order</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Item Modal -->
+<div class="modal fade" id="addItemModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add item to order</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label">Item name</label>
+          <input id="ai_name" class="form-control" placeholder="e.g. Mee Goreng Special">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Unit price (RM)</label>
+          <input id="ai_price" type="number" step="0.01" class="form-control" placeholder="e.g. 8.50">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Quantity</label>
+          <input id="ai_qty" type="number" min="1" value="1" class="form-control">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Note (optional)</label>
+          <input id="ai_note" class="form-control" placeholder="e.g. tak pedas">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" id="ai_addBtn">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Order Items Modal -->
+<div class="modal fade" id="orderItemsModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Items for Order <span id="orderItemsModalId"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <ul class="list-group" id="orderItemsList"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+  <button id="logoutBtn" class="logout-floating">🚪 Logout</button>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

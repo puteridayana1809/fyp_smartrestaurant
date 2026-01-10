@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cashier - Payment System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* ========================================
+       CSS VARIABLES & RESET
+    ======================================== */
+    :root {
+      --primary-yellow: #F5C518;
+      --primary-dark: #1a1a2e;
+      --accent-green: #22c55e;
+      --accent-red: #ef4444;
+      --accent-blue: #3b82f6;
+      --bg-light: #f8f9fc;
+      --text-dark: #333;
+      --text-muted: #888;
+      --border-color: #e5e7eb;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background: var(--bg-light);
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ========================================
+       HEADER
+    ======================================== */
+    .header {
+      background: linear-gradient(135deg, var(--primary-dark) 0%, #2d3561 100%);
+      color: white;
+      padding: 1rem 1.5rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-content {
+      max-width: 1600px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-brand .logo {
+      width: 42px;
+      height: 42px;
+      background: var(--primary-yellow);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .header-brand .logo i {
+      color: var(--primary-dark);
+      font-size: 1.3rem;
+    }
+
+    .header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .header-time {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .header-date {
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
+
+    .btn-logout {
+      background: var(--accent-red);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+    }
+
+    .btn-logout:hover {
+      background: #dc2626;
+      transform: translateY(-2px);
+    }
+
+    /* ========================================
+       MAIN LAYOUT
+    ======================================== */
+    .main-wrapper {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 1.5rem;
+      min-height: calc(100vh - 70px);
+    }
+
+    /* ========================================
+       CARDS
+    ======================================== */
+    .section-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+
+    .section-header {
+      background: var(--primary-dark);
+      color: white;
+      padding: 1rem 1.25rem;
+      font-size: 1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-header i {
+      color: var(--primary-yellow);
+    }
+
+    /* ========================================
+       TABLE GRID
+    ======================================== */
+    .table-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 12px;
+      padding: 1.25rem;
+    }
+
+    .btn-table {
+      aspect-ratio: 1;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .btn-table:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+
+    .btn-table-status {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      opacity: 0.9;
+    }
+
+    .btn-table.available {
+      background: linear-gradient(135deg, var(--accent-green) 0%, #16a34a 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+    }
+
+    .btn-table.ordered {
+      background: linear-gradient(135deg, var(--accent-red) 0%, #dc2626 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+    }
+
+    .btn-table.selected {
+      outline: 4px solid var(--primary-dark);
+      outline-offset: 2px;
+      box-shadow: 0 0 0 6px rgba(26,26,46,0.15);
+    }
+
+    /* ========================================
+       CASHIER PANEL
+    ======================================== */
+    .cashier-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      position: sticky;
+      top: 85px;
+      height: fit-content;
+    }
+
+    .panel-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+
+    /* ========================================
+       ORDER DETAILS
+    ======================================== */
+    .order-details {
+      padding: 1.25rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: var(--text-muted);
+    }
+
+    .empty-state i {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      opacity: 0.4;
+    }
+
+    .order-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 1rem;
+    }
+
+    .info-item {
+      background: var(--bg-light);
+      padding: 10px 12px;
+      border-radius: 10px;
+    }
+
+    .info-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+
+    .info-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+    }
+
+    /* ========================================
+       ITEMS LIST
+    ======================================== */
+    .items-header {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .items-list {
+      max-height: 200px;
+      overflow-y: auto;
+      background: var(--bg-light);
+      border-radius: 12px;
+    }
+
+    .items-list::-webkit-scrollbar { width: 5px; }
+    .items-list::-webkit-scrollbar-track { background: #f0f0f0; border-radius: 10px; }
+    .items-list::-webkit-scrollbar-thumb { background: #d0d0d0; border-radius: 10px; }
+
+    .item-row {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      background: white;
+      margin: 5px;
+      border-radius: 8px;
+      border-left: 3px solid var(--primary-yellow);
+      font-size: 0.85rem;
+    }
+
+    .item-qty {
+      background: var(--primary-dark);
+      color: white;
+      min-width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-right: 10px;
+    }
+
+    .item-name {
+      flex: 1;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .item-price {
+      font-weight: 700;
+      color: var(--accent-green);
+    }
+
+    .no-items {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 1.5rem;
+      font-style: italic;
+    }
+
+    /* ========================================
+       TOTALS
+    ======================================== */
+    .totals-section {
+      padding: 1.25rem;
+      background: var(--bg-light);
+      border-top: 1px solid var(--border-color);
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+
+    .total-label { color: #666; }
+    .total-value { font-weight: 600; }
+
+    .divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 10px 0;
+    }
+
+    .grand-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      background: linear-gradient(135deg, var(--primary-dark) 0%, #2d3561 100%);
+      border-radius: 12px;
+      color: white;
+      margin-top: 10px;
+    }
+
+    .grand-total-label {
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+
+    .grand-total-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    /* ========================================
+       PAYMENT SECTION
+    ======================================== */
+    .payment-section {
+      padding: 1.25rem;
+    }
+
+    .payment-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .payment-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 1rem;
+    }
+
+    .btn-payment {
+      padding: 12px;
+      border: 2px solid var(--border-color);
+      border-radius: 10px;
+      background: white;
+      color: var(--text-dark);
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-payment:hover {
+      border-color: var(--primary-dark);
+    }
+
+    .btn-payment.active {
+      background: var(--primary-dark);
+      color: white;
+      border-color: var(--primary-dark);
+    }
+
+    .btn-complete {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent-green) 0%, #16a34a 100%);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-complete:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+    }
+
+    .btn-complete:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ========================================
+       RECENT PAYMENTS
+    ======================================== */
+    .recent-payments {
+      padding: 1.25rem;
+    }
+
+    .recent-header {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .payments-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .payment-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 0.8rem;
+    }
+
+    .payment-item:last-child { border-bottom: none; }
+
+    .payment-order {
+      font-weight: 600;
+      color: var(--primary-dark);
+      width: 90px;
+      font-family: monospace;
+      font-size: 0.75rem;
+    }
+
+    .payment-table {
+      flex: 1;
+      font-weight: 600;
+    }
+
+    .payment-amount {
+      width: 70px;
+      font-weight: 600;
+    }
+
+    .badge-cash {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--accent-green);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.65rem;
+      font-weight: 700;
+    }
+
+    .badge-qr {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--accent-blue);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.65rem;
+      font-weight: 700;
+    }
+
+    .payment-time {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      width: 70px;
+      text-align: right;
+    }
+
+    .btn-view {
+      background: none;
+      border: 1px solid var(--border-color);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+
+    .btn-view:hover {
+      background: var(--bg-light);
+    }
+
+    /* ========================================
+       RESPONSIVE
+    ======================================== */
+    @media (max-width: 1100px) {
+      .main-wrapper {
+        grid-template-columns: 1fr;
+      }
+      .cashier-panel {
+        position: static;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .table-grid {
+        grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+        gap: 10px;
+        padding: 1rem;
+      }
+      .header h1 {
+        font-size: 1.1rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ========================================
+       HEADER
+  ======================================== -->
+  <header class="header">
+    <div class="header-content">
+      <div class="header-brand">
+        <div class="logo"><i class="fas fa-cash-register"></i></div>
+        <h1>Cashier - Payment System</h1>
+      </div>
+      <div class="header-right">
+        <div style="text-align: right;">
+          <div class="header-time" id="currentTime">00:00:00</div>
+          <div class="header-date" id="currentDate">Loading...</div>
+        </div>
+        <button class="btn-logout" id="logoutBtn">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================
+       MAIN CONTENT
+  ======================================== -->
+  <main class="main-wrapper">
+    <!-- LEFT: TABLES -->
+    <section class="tables-section">
+      <div class="section-card">
+        <div class="section-header">
+          <i class="fas fa-utensils"></i>
+          Tables & Orders
+        </div>
+        <div class="table-grid" id="tableGrid">
+          <!-- Tables rendered by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: CASHIER PANEL -->
+    <aside class="cashier-panel">
+      <!-- ORDER DETAILS -->
+      <div class="panel-card">
+        <div class="order-details" id="orderDetails">
+          <div class="empty-state" id="emptyState">
+            <i class="fas fa-hand-pointer"></i>
+            <p>Select a table with an order</p>
+          </div>
+          
+          <div id="orderContent" style="display: none;">
+            <div class="order-info">
+              <div class="info-item">
+                <div class="info-label">Order ID</div>
+                <div class="info-value" id="orderId">-</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Table</div>
+                <div class="info-value" id="tableInfo">-</div>
+              </div>
+            </div>
+            
+            <div class="items-header">Order Items</div>
+            <div class="items-list" id="itemsList">
+              <div class="no-items">No items</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="totals-section" id="totalsSection" style="display: none;">
+          <div class="total-row">
+            <span class="total-label">Subtotal</span>
+            <span class="total-value">RM <span id="subtotal">0.00</span></span>
+          </div>
+          <div class="total-row">
+            <span class="total-label">SST (6%)</span>
+            <span class="total-value">RM <span id="sst">0.00</span></span>
+          </div>
+          <div class="divider"></div>
+          <div class="grand-total">
+            <span class="grand-total-label">TOTAL</span>
+            <span class="grand-total-value">RM <span id="totalAmount">0.00</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAYMENT -->
+      <div class="panel-card">
+        <div class="payment-section" id="paymentSection" style="display: none;">
+          <span class="payment-label">Payment Method</span>
+          <div class="payment-buttons">
+            <button class="btn-payment" id="btnCash" data-method="Cash">
+              <i class="fas fa-money-bill-wave"></i> Cash
+            </button>
+            <button class="btn-payment" id="btnQR" data-method="QR">
+              <i class="fas fa-qrcode"></i> QR Code
+            </button>
+          </div>
+          <button class="btn-complete" id="completeBtn" disabled>
+            <i class="fas fa-check-circle"></i> Complete Payment
+          </button>
+        </div>
+      </div>
+
+      <!-- RECENT PAYMENTS -->
+      <div class="panel-card">
+        <div class="recent-payments">
+          <div class="recent-header">
+            <i class="fas fa-history"></i> Recent Payments
+          </div>
+          <div class="payments-list" id="paymentsList">
+            <div class="no-items">No recent payments</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- ========================================
+       ORDER ITEMS MODAL
+  ======================================== -->
+  <div class="modal fade" id="orderItemsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Order <span id="modalOrderId"></span></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <ul class="list-group" id="modalItemsList"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================
+       SCRIPTS
+  ======================================== -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script type="module">
+    // ========================================
+    // FIREBASE IMPORTS
+    // ========================================
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, collection, onSnapshot, updateDoc, 
+      serverTimestamp, query, orderBy, limit
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // ========================================
+    // FIREBASE CONFIG (imported from module)
+    // ========================================
+    import { firebaseConfig, RESTAURANT_ID } from "./js/firebase-config.esm.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // ========================================
+    // CONSTANTS & HELPERS
+    // ========================================
+    const SST_RATE = 0.06; // 6% SST
+
+    const rcol = (name) => collection(db, `restaurants/${RESTAURANT_ID}/${name}`);
+    const rdoc = (name, id) => doc(db, `restaurants/${RESTAURANT_ID}/${name}`, String(id));
+
+    // ========================================
+    // STATE
+    // ========================================
+    let state = {
+      currentOrderId: null,
+      currentTableId: null,
+      currentTableName: null,
+      selectedPaymentMethod: null,
+      currentTotal: 0
+    };
+
+    // ========================================
+    // DOM ELEMENTS
+    // ========================================
+    const DOM = {
+      tableGrid: document.getElementById('tableGrid'),
+      emptyState: document.getElementById('emptyState'),
+      orderContent: document.getElementById('orderContent'),
+      orderId: document.getElementById('orderId'),
+      tableInfo: document.getElementById('tableInfo'),
+      itemsList: document.getElementById('itemsList'),
+      totalsSection: document.getElementById('totalsSection'),
+      subtotal: document.getElementById('subtotal'),
+      sst: document.getElementById('sst'),
+      totalAmount: document.getElementById('totalAmount'),
+      paymentSection: document.getElementById('paymentSection'),
+      btnCash: document.getElementById('btnCash'),
+      btnQR: document.getElementById('btnQR'),
+      completeBtn: document.getElementById('completeBtn'),
+      paymentsList: document.getElementById('paymentsList'),
+      currentTime: document.getElementById('currentTime'),
+      currentDate: document.getElementById('currentDate'),
+      logoutBtn: document.getElementById('logoutBtn')
+    };
+
+    // ========================================
+    // CLOCK
+    // ========================================
+    function updateClock() {
+      const now = new Date();
+      DOM.currentTime.textContent = now.toLocaleTimeString('en-MY', { 
+        hour: '2-digit', minute: '2-digit', second: '2-digit' 
+      });
+      DOM.currentDate.textContent = now.toLocaleDateString('en-MY', { 
+        weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+      });
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // ========================================
+    // AUTH
+    // ========================================
+    function goLogin(msg) { 
+      if (msg) alert(msg); 
+      window.location.href = "index.html"; 
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return goLogin("Please sign in first.");
+      try {
+        const snap = await getDoc(doc(db, "roles", user.uid));
+        const role = String(snap.data()?.role || "").toLowerCase();
+        if (!snap.exists() || role !== "receptionist") {
+          await signOut(auth);
+          return goLogin("Access denied. Receptionist only.");
+        }
+      } catch (e) {
+        console.error(e);
+        await signOut(auth);
+        goLogin("Error verifying role.");
+      }
+    });
+
+    DOM.logoutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+      window.location.href = "index.html";
+    });
+
+    // ========================================
+    // TABLE SORTING
+    // ========================================
+    function sortTablesNatural(tables) {
+      function getKey(t) {
+        const label = String(t.name || `T${t.number}` || t.id);
+        let group = 3, num = 0;
+        
+        const matchT = /^T(\d+)$/i.exec(label);
+        const matchNum = /^(\d+)$/.exec(label);
+        const matchB = /^B(ungkus)?\s*(\d+)$/i.exec(label);
+        
+        if (matchT) { group = 0; num = parseInt(matchT[1], 10); }
+        else if (matchNum) { group = 1; num = parseInt(matchNum[1], 10); }
+        else if (matchB) { group = 2; num = parseInt(matchB[2], 10); }
+        
+        return [group, num, label.toUpperCase()];
+      }
+      
+      return [...tables].sort((a, b) => {
+        const keyA = getKey(a), keyB = getKey(b);
+        return keyA[0] - keyB[0] || keyA[1] - keyB[1] || keyA[2].localeCompare(keyB[2]);
+      });
+    }
+
+    // ========================================
+    // RENDER TABLES
+    // ========================================
+    function renderTables(tables) {
+      DOM.tableGrid.innerHTML = '';
+      
+      tables.forEach(table => {
+        const btn = document.createElement('button');
+        const hasOrder = !!table.activeOrderId;
+        const tableName = table.name || `T${table.number}`;
+        
+        btn.className = `btn-table ${hasOrder ? 'ordered' : 'available'}`;
+        if (state.currentTableId === table.id) {
+          btn.classList.add('selected');
+        }
+        
+        btn.innerHTML = `
+          ${tableName}
+          <div class="btn-table-status">${hasOrder ? 'Order' : 'Ready'}</div>
+        `;
+        
+        btn.addEventListener('click', () => selectTable(table));
+        DOM.tableGrid.appendChild(btn);
+      });
+    }
+
+    // ========================================
+    // SELECT TABLE
+    // ========================================
+    async function selectTable(table) {
+      // Update selection UI
+      document.querySelectorAll('.btn-table').forEach(b => b.classList.remove('selected'));
+      event.target.closest('.btn-table')?.classList.add('selected');
+      
+      // Update state
+      state.currentTableId = table.id;
+      state.currentTableName = table.name || `T${table.number}`;
+      state.currentOrderId = null;
+      state.selectedPaymentMethod = null;
+      state.currentTotal = 0;
+      
+      // Reset payment buttons
+      resetPaymentButtons();
+      
+      // Load order if exists
+      if (table.activeOrderId) {
+        try {
+          const snap = await getDoc(rdoc("orders", table.activeOrderId));
+          if (snap.exists()) {
+            state.currentOrderId = snap.id;
+            displayOrder(snap.id, snap.data());
+            return;
+          }
+        } catch (e) {
+          console.error("Error loading order:", e);
+        }
+      }
+      
+      // No order - show empty state
+      hideOrder();
+    }
+
+    // ========================================
+    // DISPLAY ORDER
+    // ========================================
+    function displayOrder(orderId, data) {
+      DOM.emptyState.style.display = 'none';
+      DOM.orderContent.style.display = 'block';
+      DOM.totalsSection.style.display = 'block';
+      DOM.paymentSection.style.display = 'block';
+      
+      DOM.orderId.textContent = orderId;
+      DOM.tableInfo.textContent = state.currentTableName || '-';
+      
+      // Render items
+      DOM.itemsList.innerHTML = '';
+      let subtotal = 0;
+      
+      const items = data.items || [];
+      if (items.length === 0) {
+        DOM.itemsList.innerHTML = '<div class="no-items">No items</div>';
+      } else {
+        items.forEach(item => {
+          const price = Number(item.unitPrice ?? item.price ?? 0);
+          const qty = Number(item.qty) || 1;
+          const itemTotal = price * qty;
+          subtotal += itemTotal;
+          
+          const itemRow = document.createElement('div');
+          itemRow.className = 'item-row';
+          itemRow.innerHTML = `
+            <div class="item-qty">${qty}×</div>
+            <div class="item-name">${item.name}</div>
+            <div class="item-price">RM ${itemTotal.toFixed(2)}</div>
+          `;
+          DOM.itemsList.appendChild(itemRow);
+        });
+      }
+      
+      // Calculate totals
+      const sst = subtotal * SST_RATE;
+      const total = subtotal + sst;
+      state.currentTotal = total;
+      
+      DOM.subtotal.textContent = subtotal.toFixed(2);
+      DOM.sst.textContent = sst.toFixed(2);
+      DOM.totalAmount.textContent = total.toFixed(2);
+    }
+
+    // ========================================
+    // HIDE ORDER
+    // ========================================
+    function hideOrder() {
+      DOM.emptyState.style.display = 'block';
+      DOM.orderContent.style.display = 'none';
+      DOM.totalsSection.style.display = 'none';
+      DOM.paymentSection.style.display = 'none';
+    }
+
+    // ========================================
+    // PAYMENT SELECTION
+    // ========================================
+    function resetPaymentButtons() {
+      DOM.btnCash.classList.remove('active');
+      DOM.btnQR.classList.remove('active');
+      DOM.completeBtn.disabled = true;
+      state.selectedPaymentMethod = null;
+    }
+
+    function selectPayment(method, btn) {
+      state.selectedPaymentMethod = method;
+      DOM.btnCash.classList.remove('active');
+      DOM.btnQR.classList.remove('active');
+      btn.classList.add('active');
+      DOM.completeBtn.disabled = false;
+    }
+
+    DOM.btnCash.addEventListener('click', () => selectPayment('Cash', DOM.btnCash));
+    DOM.btnQR.addEventListener('click', () => selectPayment('QR', DOM.btnQR));
+
+    // ========================================
+    // COMPLETE PAYMENT
+    // ========================================
+    DOM.completeBtn.addEventListener('click', async () => {
+      if (!state.currentOrderId) {
+        alert('No order selected');
+        return;
+      }
+      if (!state.selectedPaymentMethod) {
+        alert('Please select a payment method');
+        return;
+      }
+      
+      try {
+        DOM.completeBtn.disabled = true;
+        DOM.completeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        
+        // Update order
+        await updateDoc(rdoc("orders", state.currentOrderId), {
+          status: "completed",
+          payment: state.selectedPaymentMethod,
+          total: state.currentTotal,
+          completedAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        
+        // Update table
+        await updateDoc(rdoc("tables", state.currentTableId), {
+          status: "available",
+          activeOrderId: null,
+          updatedAt: serverTimestamp()
+        });
+        
+        alert('✅ Payment completed successfully!');
+        
+        // Reset state
+        state.currentOrderId = null;
+        state.currentTableId = null;
+        state.currentTableName = null;
+        state.selectedPaymentMethod = null;
+        state.currentTotal = 0;
+        
+        // Reset UI
+        document.querySelectorAll('.btn-table').forEach(b => b.classList.remove('selected'));
+        resetPaymentButtons();
+        hideOrder();
+        
+      } catch (err) {
+        console.error(err);
+        alert('Error: ' + err.message);
+      } finally {
+        DOM.completeBtn.disabled = false;
+        DOM.completeBtn.innerHTML = '<i class="fas fa-check-circle"></i> Complete Payment';
+      }
+    });
+
+    // ========================================
+    // LISTEN TO TABLES
+    // ========================================
+    onSnapshot(rcol("tables"), (snap) => {
+      const tables = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderTables(sortTablesNatural(tables));
+    });
+
+    // ========================================
+    // LISTEN TO RECENT PAYMENTS
+    // ========================================
+    const paymentsQuery = query(rcol("orders"), orderBy("completedAt", "desc"), limit(15));
+    
+    onSnapshot(paymentsQuery, (snap) => {
+      const completed = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(o => o.status === "completed");
+      
+      if (completed.length === 0) {
+        DOM.paymentsList.innerHTML = '<div class="no-items">No recent payments</div>';
+        return;
+      }
+      
+      DOM.paymentsList.innerHTML = '';
+      completed.forEach(order => {
+        const when = order.completedAt?.toDate?.();
+        const timeStr = when ? when.toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' }) : '-';
+        const tableName = order.table || (order.tableNumber ? `T${order.tableNumber}` : '-');
+        const amount = (Number(order.total) || 0).toFixed(2);
+        const badgeClass = order.payment === 'QR' ? 'badge-qr' : 'badge-cash';
+        
+        const item = document.createElement('div');
+        item.className = 'payment-item';
+        item.innerHTML = `
+          <span class="payment-order">${order.id.slice(-8)}</span>
+          <span class="payment-table">${tableName}</span>
+          <span class="payment-amount">RM ${amount}</span>
+          <span class="${badgeClass}">${order.payment || 'Cash'}</span>
+          <span class="payment-time">${timeStr}</span>
+          <button class="btn-view" data-order-id="${order.id}">View</button>
+        `;
+        DOM.paymentsList.appendChild(item);
+      });
+    });
+
+    // ========================================
+    // VIEW ORDER DETAILS
+    // ========================================
+    DOM.paymentsList.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.btn-view');
+      if (!btn) return;
+      
+      const orderId = btn.dataset.orderId;
+      try {
+        const snap = await getDoc(rdoc("orders", orderId));
+        if (!snap.exists()) return alert("Order not found");
+        
+        const order = snap.data();
+        document.getElementById('modalOrderId').textContent = orderId;
+        
+        const list = document.getElementById('modalItemsList');
+        list.innerHTML = '';
+        
+        (order.items || []).forEach(item => {
+          const qty = item.qty || 1;
+          const price = Number(item.unitPrice ?? item.price ?? 0);
+          const li = document.createElement('li');
+          li.className = 'list-group-item d-flex justify-content-between';
+          li.innerHTML = `
+            <span>${qty}× ${item.name}</span>
+            <strong>RM ${(price * qty).toFixed(2)}</strong>
+          `;
+          list.appendChild(li);
+        });
+        
+        // Add total
+        const totalLi = document.createElement('li');
+        totalLi.className = 'list-group-item d-flex justify-content-between bg-light';
+        totalLi.innerHTML = `
+          <strong>Total</strong>
+          <strong>RM ${(order.total || 0).toFixed(2)}</strong>
+        `;
+        list.appendChild(totalLi);
+        
+        new bootstrap.Modal(document.getElementById('orderItemsModal')).show();
+      } catch (e) {
+        console.error(e);
+        alert("Error loading order");
+      }
+    });
+
+  </script>
+</body>
+</html>

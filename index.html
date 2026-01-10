@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bihun Sup Daging Selambak — Staff Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary-blue: #1e3a8a; /* Navy Blue */
+      --accent-blue: #3b82f6;  /* Royal Blue */
+      --bg-light: #f8fafc;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --white: #ffffff;
+    }
+
+    * {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: #f1f5f9;
+      background-image: radial-gradient(var(--primary-blue) 0.5px, transparent 0.5px);
+      background-size: 24px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .login-container {
+      display: flex;
+      max-width: 1000px;
+      width: 100%;
+      min-height: 650px;
+      background: var(--white);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Left Side: Branding */
+    .brand-side {
+      flex: 1.1;
+      background: linear-gradient(135deg, rgba(30, 58, 138, 0.92), rgba(30, 58, 138, 0.8)), 
+                  url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1000&auto=format&fit=crop');
+      background-size: cover;
+      background-position: center;
+      padding: 60px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      color: var(--white);
+    }
+
+    .logo-badge {
+      width: 65px;
+      height: 65px;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin-bottom: 25px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .brand-title {
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 15px;
+      letter-spacing: -1px;
+    }
+
+    .brand-subtitle {
+      font-size: 16px;
+      opacity: 0.9;
+      line-height: 1.6;
+      margin-bottom: 35px;
+    }
+
+    .feature-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .tag {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 6px 14px;
+      border-radius: 50px;
+      font-size: 12px;
+      font-weight: 500;
+      backdrop-filter: blur(5px);
+    }
+
+    /* Right Side: Form */
+    .form-side {
+      flex: 0.9;
+      padding: 60px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: var(--white);
+    }
+
+    .form-header h2 {
+      font-weight: 800;
+      color: var(--primary-blue);
+      font-size: 30px;
+      margin-bottom: 5px;
+    }
+
+    .form-header p {
+      color: var(--text-muted);
+      font-size: 15px;
+      margin-bottom: 35px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-control, .form-select {
+      width: 100%;
+      padding: 14px 16px;
+      background: #f1f5f9;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      font-size: 15px;
+      transition: all 0.2s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+      outline: none;
+      background: var(--white);
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+    }
+
+    .password-wrapper {
+      position: relative;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--accent-blue);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 16px;
+      background: var(--primary-blue);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .btn-login:hover {
+      background: var(--accent-blue);
+      transform: translateY(-2px);
+    }
+
+    .remember-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 25px;
+    }
+
+    .remember-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--primary-blue);
+    }
+
+    .alert-box {
+      padding: 12px 16px;
+      background: #fee2e2;
+      border-left: 4px solid #ef4444;
+      color: #b91c1c;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .alert-box.show { display: block; }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+    .spinner.show { display: block; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .footer-text {
+      text-align: center;
+      margin-top: 35px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 850px) {
+      .login-container { flex-direction: column; max-width: 450px; }
+      .brand-side { padding: 40px; min-height: 250px; }
+      .brand-title { font-size: 32px; }
+      .feature-tags { display: none; }
+      .form-side { padding: 40px 30px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-container">
+  <div class="brand-side">
+    <div class="logo-badge">🍜</div>
+    <h1 class="brand-title">Bihun Sup<br>Selambak</h1>
+    <p class="brand-subtitle">Portal pengurusan staf rasmi untuk kawalan pesanan, dapur, dan pemantauan prestasi restoran.</p>
+    <div class="feature-tags">
+      <span class="tag">Order System</span>
+      <span class="tag">Kitchen KDS</span>
+      <span class="tag">Admin Analytics</span>
+    </div>
+  </div>
+
+  <div class="form-side">
+    <div class="form-header">
+      <h2>Selamat Datang</h2>
+      <p>Log masuk untuk mengakses tugasan anda.</p>
+    </div>
+
+    <div id="alert" class="alert-box"></div>
+
+    <div class="form-group">
+      <label for="email">E-mel</label>
+      <input id="email" type="email" class="form-control" placeholder="staff@selambak.com" autocomplete="username" />
+    </div>
+
+    <div class="form-group">
+      <label for="password">Kata Laluan</label>
+      <div class="password-wrapper">
+        <input id="password" type="password" class="form-control" placeholder="••••••••" autocomplete="current-password" />
+        <button id="togglePwd" type="button" class="password-toggle">LIHAT</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="roleSelect">Peranan (Role)</label>
+      <select id="roleSelect" class="form-select">
+        <option value="admin">Admin</option>
+        <option value="receptionist">Receptionist</option>
+        <option value="waiter">Waiter</option>
+        <option value="kitchen">Kitchen</option>
+      </select>
+    </div>
+
+    <div class="remember-row">
+      <input type="checkbox" id="rememberMe" checked>
+      <label for="rememberMe" style="font-size: 14px; color: var(--text-muted); cursor: pointer;">Ingat saya</label>
+    </div>
+
+    <button id="loginBtn" class="btn-login">
+      <div id="spinner" class="spinner"></div>
+      <span>LOG MASUK</span>
+    </button>
+
+    <div class="footer-text">© 2025 Bihun Sup Daging Selambak — Staff Portal</div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth,
+    signInWithEmailAndPassword,
+    setPersistence,
+    browserSessionPersistence,
+    browserLocalPersistence,
+    onAuthStateChanged,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { firebaseConfig } from "./js/firebase-config.esm.js";
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const emailEl = document.getElementById('email');
+  const passEl = document.getElementById('password');
+  const roleEl = document.getElementById('roleSelect');
+  const alertEl = document.getElementById('alert');
+  const btn = document.getElementById('loginBtn');
+  const spinEl = document.getElementById('spinner');
+  const rememberEl = document.getElementById('rememberMe');
+
+  const routeMap = {
+    admin: "admin.html",
+    receptionist: "reception.html",
+    waiter: "order.html",
+    kitchen: "kds.html",
+  };
+
+  function showAlert(msg){ alertEl.textContent = msg; alertEl.classList.add('show'); }
+  function hideAlert(){ alertEl.classList.remove('show'); }
+
+  async function getUserRole(uid){
+    const snap = await getDoc(doc(db, "roles", uid));
+    if (!snap.exists()) throw new Error("Akaun anda tiada peranan yang didaftarkan.");
+    return String(snap.data().role || "").toLowerCase();
+  }
+
+  async function redirectByRole(uid){
+    const realRole = await getUserRole(uid);
+    const dest = routeMap[realRole];
+    if (!dest) throw new Error(`Peranan "${realRole}" tidak diketahui.`);
+    window.location.href = dest;
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) return;
+    const uid = user.uid;
+    const roleSnap = await getDoc(doc(db, "roles", uid));
+    const role = roleSnap.data()?.role || "";
+    if (role === "admin") return;
+    await redirectByRole(uid);
+  });
+
+  // Toggle Password
+  document.getElementById('togglePwd').addEventListener('click', () => {
+    const isPwd = passEl.type === 'password';
+    passEl.type = isPwd ? 'text' : 'password';
+    document.getElementById('togglePwd').textContent = isPwd ? 'SOROK' : 'LIHAT';
+  });
+
+  // Login Handler
+  btn.addEventListener('click', async () => {
+    hideAlert();
+    btn.disabled = true; spinEl.classList.add('show');
+
+    const email = emailEl.value.trim();
+    const pass = passEl.value;
+    const chosenRole = roleEl.value;
+    const remember = rememberEl.checked;
+
+    try {
+      await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
+      const cred = await signInWithEmailAndPassword(auth, email, pass);
+      const realRole = await getUserRole(cred.user.uid);
+
+      if (chosenRole && chosenRole !== realRole) {
+        showAlert(`Akaun ini adalah peranan "${realRole}". Menghala ke halaman yang betul...`);
+      }
+
+      if (realRole === "admin" && chosenRole === "kitchen") {
+        window.location.href = "kds.html";
+        return;
+      }
+
+      await redirectByRole(cred.user.uid);
+    } catch (e) {
+      showAlert("Gagal log masuk: E-mel atau kata laluan salah.");
+      try { await signOut(auth); } catch {}
+    } finally {
+      btn.disabled = false; spinEl.classList.remove('show');
+    }
+  });
+</script>
+
+</body>
+</html>

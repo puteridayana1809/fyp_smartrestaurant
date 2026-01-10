@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Kedai Makan - Order Page</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Firebase (auth + firestore) + guard -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc,setDoc, collection, addDoc, serverTimestamp,
+    query, orderBy, onSnapshot, updateDoc,runTransaction
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    import { firebaseConfig, RESTAURANT_ID as restaurantId } from "./js/firebase-config.esm.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+
+    // Expose for non-module script below (cart + submit still use these)
+    window.db = db;
+    window.addDoc = addDoc;
+    window.collection = collection;
+    window.serverTimestamp = serverTimestamp;
+    window.getDoc = getDoc;
+    window.setDoc = setDoc;
+    window.doc = doc;
+    window.updateDoc = updateDoc;
+    window.runTransaction=runTransaction;
+    window.restaurantId = restaurantId;
+
+    window.selectedTableId = null;       
+    window.selectedTableNumber = null;
+    // keep this near your globals
+    window.selectedTable = null;
+
+
+
+    function goLogin(msg) {
+      if (msg) alert(msg);
+      window.location.href = "index.html";
+    }
+
+
+
+    // ✅ Auth + Role guard: only allow "waiter"
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return goLogin("Please sign in first.");
+
+      try {
+        const snap = await getDoc(doc(db, "roles", user.uid));
+        if (!snap.exists()) {
+          await signOut(auth);
+          return goLogin("No role assigned. Ask admin to set your role.");
+        }
+        const role = String(snap.data().role || "").toLowerCase();
+        if (role !== "waiter") {
+          await signOut(auth);
+          return goLogin("Access denied. This page is for WAITERS only.");
+        }
+        // Waiter verified — page can continue normally
+      } catch (e) {
+        console.error("Role check failed:", e);
+        await signOut(auth);
+        goLogin("Error verifying role: " + (e.code || e.message));
+      }
+    });
+
+    // 🔴 Logout
+    document.getElementById("logoutBtn")?.addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+        window.location.href = "index.html";
+      } catch (err) {
+        alert("Error logging out: " + err.message);
+      }
+    });
+
+   window.addEventListener("DOMContentLoaded", () => {
+    // ===== TABLES =====
+    const tableContainer = document.getElementById("tableButtons");
+    if (!tableContainer) return console.error("❌ #tableButtons not found in DOM");
+
+// add near top
+let selectedTableId = null;        // Firestore doc id
+let selectedTableNumber = null;    // display number
+
+function isBungkusDoc(t){
+  return t?.type === 'bungkus'
+      || /^bungkus[- ]?\d+$/i.test(String(t?.id || ''))
+      || /^B\d+$/i.test(String(t?.name || ''));
+}
+
+function sortTablesNatural(list){
+  function key(t){
+    if (isBungkusDoc(t)) return [0, 0, (t.name||t.id||'').toUpperCase()];
+    // T1..Tn, then plain numbers, then others
+    const label = String(t.name || (t.number!=null?`T${t.number}`:''));
+    const mT = /^T(\d+)$/i.exec(label);
+    const mN = /^(\d+)$/.exec(label);
+    if (mT) return [1, parseInt(mT[1],10), label.toUpperCase()];
+    if (mN) return [2, parseInt(mN[1],10), label.toUpperCase()];
+    return [3, 0, label.toUpperCase()];
+  }
+  return [...list].sort((a,b)=>{const A=key(a),B=key(b);return A[0]-B[0]||A[1]-B[1]||A[2].localeCompare(B[2]);});
+}
+
+
+
+function renderTables(tables) {
+  tableContainer.innerHTML = "";
+
+// Get everything Admin configured in /tables and render in one pass
+const all = sortTablesNatural(tables);
+
+all.forEach((t, i) => {
+ const hasOrder = !!t.activeOrderId;           // red if ANY active ticket, green otherwise
+
+const btn = document.createElement('button');
+btn.className = 'btn ' + (hasOrder ? 'btn-danger' : 'btn-success');
+
+
+const isB = (t.type === 'bungkus')
+         || /^B(ungkus)?\s*\d+$/i.test(String(t.name || ''))
+         || /^B\d+$/i.test(String(t.id || '')); 
+
+  // label fallbacks:
+const label = t.name || (isB ? (t.name || String(t.id)) : (t.number != null ? `T${t.number}` : String(t.id)));
+
+
+  btn.textContent = label;
+
+btn.onclick = () => {
+  document.querySelectorAll('#tableButtons button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+
+  window.selectedTable       = t;
+  window.selectedTableId     = t.id;
+  window.selectedTableNumber = isB ? null : t.number;
+  window.selectedTableLabel  = label;
+
+  document.getElementById('tableNumber').value = isB ? label : (t.number ?? '');
+  const st = document.getElementById('selectedTable');
+  if (st) st.innerText = label;
+};
+
+  tableContainer.appendChild(btn);
+});
+
+
+
+}
+
+
+
+
+    const tablesQ = query(collection(db, `restaurants/${restaurantId}/tables`), orderBy("number"));
+    onSnapshot(
+      tablesQ,
+      snap => {
+        console.log("📥 tables docs:", snap.size);
+        const tables = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+        renderTables(tables);
+      },
+      err => {
+        console.error("❌ tables onSnapshot error:", err);
+        alert("Tables read error: " + err.code);
+      }
+    );
+
+
+
+
+
+    // ===== MENU =====
+    const menuContainer = document.getElementById("menuContainer");
+    if (!menuContainer) return console.error("❌ #menuContainer not found in DOM");
+
+    function formatRM(v){ return v==null ? "-" : "RM " + Number(v).toFixed(2); }
+
+    function renderMenuByCategory(categories, items) {
+      console.log("📊 rendering | cats:", categories.length, "items:", items.length);
+      menuContainer.innerHTML = "";
+      const catMap = new Map(categories.map(c => [c.categoryId, c]));
+      const grouped = {};
+      items.forEach(it => { (grouped[it.categoryId] ||= []).push(it); });
+
+      Object.keys(grouped)
+        .sort((a,b) => (catMap.get(a)?.sort||99)-(catMap.get(b)?.sort||99))
+        .forEach(cid => {
+          const cat = catMap.get(cid);
+          const title = cat?.name || cid;
+          const accId = `acc_${cid}`;
+          const bodyId = `body_${cid}`;
+
+          const section = document.createElement("div");
+          section.className = "accordion-item";
+          section.id = accId;
+          section.innerHTML = `
+            <div>
+              <button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#${bodyId}">${title}</button>
+              <div id="${bodyId}" class="accordion-collapse collapse">
+                <div class="accordion-body">
+                  <div class="menu-grid"></div>
+                </div>
+              </div>
+            </div>`;
+          const gridBody = section.querySelector(".menu-grid");
+
+          (grouped[cid] || [])
+            .sort((x,y)=> String(x.name).localeCompare(String(y.name)))
+            .forEach(it => {
+              const card = document.createElement("div");
+              card.className = "menu-item";
+              const price = formatRM(it.price);
+              const isAvailable = it.isAvailable !== false;
+
+              card.innerHTML = `
+                <div class="menu-item-name">${it.name}</div>
+                <div class="menu-item-price">${price}</div>
+                ${!isAvailable ? '<div style="color:#dc3545; font-size:0.85rem; margin-top:0.5rem;">Out of Stock</div>' : ''}
+              `;
+
+              if (isAvailable) {
+                card.style.cursor = 'pointer';
+                card.onclick = () => {
+                  window.addItem(it.name, it.price ?? 0);
+                };
+              } else {
+                card.style.opacity = '0.6';
+                card.style.cursor = 'not-allowed';
+              }
+
+              gridBody.appendChild(card);
+            });
+
+          menuContainer.appendChild(section);
+        });
+    }
+
+    let currentCats = [];
+    let currentItems = [];
+
+    const catsQ  = query(collection(db, `restaurants/${restaurantId}/categories`), orderBy("sort"));
+    const itemsQ = query(collection(db, `restaurants/${restaurantId}/menuItems`), orderBy("name"));
+
+    onSnapshot(
+      catsQ,
+      snap => {
+        currentCats = snap.docs.map(d=>({id:d.id, ...d.data()}));
+        console.log("📥 categories docs:", snap.size);
+        renderMenuByCategory(currentCats, currentItems);
+      },
+      err => {
+        console.error("❌ categories onSnapshot error:", err);
+        alert("Categories read error: " + err.code);
+      }
+    );
+
+    onSnapshot(
+      itemsQ,
+      snap => {
+        currentItems = snap.docs.map(d=>({id:d.id, ...d.data()}));
+        console.log("📥 menuItems docs:", snap.size);
+        renderMenuByCategory(currentCats, currentItems);
+      },
+      err => {
+        console.error("❌ menuItems onSnapshot error:", err);
+        alert("Menu read error: " + err.code);
+      }
+    );
+  });
+</script>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      padding: 0;
+    }
+    
+    .header {
+      background: rgba(255,255,255,0.95);
+      padding: 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+    
+    .header-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .header h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #f59e0b;
+      margin: 0;
+    }
+    
+    .main-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 2rem;
+      min-height: calc(100vh - 80px);
+    }
+    
+    .tables-section {
+      background: white;
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    #tableButtons {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+      gap: 0.8rem;
+    }
+    
+    #tableButtons button {
+      padding: 1rem 0.5rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: #f8fafc;
+      color: #475569;
+    }
+    
+    #tableButtons button.btn-success {
+      background: #10b981;
+      color: white;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    
+    #tableButtons button.btn-danger {
+      background: #ef4444;
+      color: white;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+    
+    #tableButtons button.active {
+      border: 2px solid #f59e0b;
+      box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2);
+    }
+    
+    .menu-section {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .menu-header {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      padding: 1.5rem;
+      font-size: 1.3rem;
+      font-weight: 700;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    #selectedTable {
+      padding: 0 1.5rem;
+      padding-top: 1rem;
+      color: #64748b;
+      font-size: 0.95rem;
+    }
+    
+    .menu-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      max-height: 600px;
+    }
+    
+    .accordion-item {
+      border: none;
+      background: #f8fafc;
+      margin-bottom: 0.8rem;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    
+    .accordion-item:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    
+    .accordion-button {
+      background: #f8fafc;
+      border: none;
+      font-weight: 600;
+      color: #1e293b;
+      padding: 1rem;
+      font-size: 1rem;
+    }
+    
+    .accordion-button:not(.collapsed) {
+      background: #f59e0b;
+      color: white;
+    }
+    
+    .accordion-body {
+      padding: 1rem;
+      background: white;
+    }
+    
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 1rem;
+    }
+    
+    .menu-item {
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+    }
+    
+    .menu-item:hover {
+      border-color: #f59e0b;
+      box-shadow: 0 8px 16px rgba(245, 158, 11, 0.2);
+      transform: translateY(-4px);
+    }
+    
+    .menu-item-name {
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+    }
+    
+    .menu-item-price {
+      color: #f59e0b;
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+    
+    .cart-sidebar {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      height: fit-content;
+      position: sticky;
+      top: 100px;
+    }
+    
+    .cart-header {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      padding: 1.5rem;
+      font-size: 1.2rem;
+      font-weight: 700;
+      border-radius: 16px 16px 0 0;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .cart-content {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 400px;
+      padding: 1rem;
+    }
+    
+    #orderList {
+      list-style: none;
+    }
+    
+    .cart-item {
+      background: #f8fafc;
+      padding: 1rem;
+      border-radius: 10px;
+      margin-bottom: 0.8rem;
+      border-left: 4px solid #f59e0b;
+      font-size: 0.9rem;
+    }
+    
+    .cart-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 0.5rem;
+    }
+    
+    .cart-item-name {
+      font-weight: 600;
+      color: #1e293b;
+    }
+    
+    .cart-item-price {
+      color: #f59e0b;
+      font-weight: 700;
+    }
+    
+    .cart-item-qty {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    
+    .qty-btn {
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: #f59e0b;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+    
+    .qty-display {
+      flex: 1;
+      text-align: center;
+      font-weight: 600;
+      color: #475569;
+    }
+    
+    .cart-item-note {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-top: 0.5rem;
+      font-style: italic;
+    }
+    
+    .remove-btn {
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.4rem;
+      background: #fee;
+      color: #dc3545;
+      border: 1px solid #fcc;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    
+    .cart-footer {
+      padding: 1.5rem;
+      border-top: 2px solid #f1f5f9;
+    }
+    
+    .total-section {
+      margin-bottom: 1rem;
+    }
+    
+    .total-label {
+      color: #64748b;
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .total-price {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #f59e0b00;
+      color: #667eea;
+    }
+    
+    .action-buttons {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.8rem;
+    }
+    
+    .btn-action {
+      padding: 1rem;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 1rem;
+    }
+    
+    .btn-submit {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    
+    .btn-submit:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+    
+    .btn-clear {
+      background: #f3f4f6;
+      color: #dc3545;
+      border: 2px solid #fcc;
+    }
+    
+    .btn-clear:hover {
+      background: #fee;
+    }
+    
+    .btn-logout {
+      background: white;
+      border: 2px solid #dc3545;
+      color: #dc3545;
+      font-weight: 600;
+      border-radius: 10px;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-logout:hover {
+      background: #fef2f2;
+      transform: translateY(-2px);
+    }
+    
+    @media (max-width: 1024px) {
+      .main-container {
+        grid-template-columns: 1fr;
+      }
+      .cart-sidebar {
+        position: static;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      #tableButtons {
+        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+      }
+      .menu-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    .empty-cart {
+      text-align: center;
+      color: #94a3b8 center;
+      color: #999;
+      padding: 2rem 1rem;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-content">
+      <h2>POS Order System</h2>
+      <button id="logoutBtn" class="btn-logout">Logout</button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTAINER -->
+  <div class="main-container">
+    <!-- LEFT: MENU & TABLES -->
+    <div>
+      <!-- TABLE SELECTION -->
+      <div class="tables-section">
+        <div class="section-title">Select Table / Bungkus</div>
+        <div id="tableButtons"></div>
+        <input type="hidden" id="tableNumber" />
+        <p id="selectedTable" style="font-size: 0.9rem; margin-top: 1rem;"></p>
+      </div>
+
+      <!-- MENU -->
+      <div class="menu-section">
+        <div class="menu-header">Menu</div>
+        <div class="menu-content">
+          <div id="menuContainer"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: CART SIDEBAR -->
+    <div class="cart-sidebar">
+      <div class="cart-header">Order Cart</div>
+      <div class="cart-content">
+        <ul id="orderList"></ul>
+        <div id="emptyCart" class="empty-cart">No items yet</div>
+      </div>
+      <div class="cart-footer">
+        <div class="total-section">
+          <div class="total-label">Total</div>
+          <div class="total-price">RM <span id="totalPrice">0.00</span></div>
+        </div>
+        <div class="action-buttons">
+          <button class="btn-action btn-submit" onclick="submitOrder()">Send Order</button>
+          <button class="btn-action btn-clear" onclick="clearOrder()">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔧 Non-module script: cart + submit (unchanged except exposing addItem globally) -->
+  <script>
+    let cart = [];
+    let noteTargetName = null;
+
+    // expose addItem for the module script to call
+window.addItem = function(name, price) {
+  const isBungkusTable = (
+    window.selectedTable?.type === "bungkus" ||
+    /^B(ungkus)?\s*\d+$/i.test(String(window.selectedTable?.name || ""))
+  );
+
+  const existing = cart.find(item => item.name === name && item.isBungkus === isBungkusTable);
+
+  if (existing) {
+    existing.qty++;
+  } else {
+    cart.push({
+      name,
+      price,
+      qty: 1,
+      isBungkus: isBungkusTable,
+      note: isBungkusTable ? "bungkus" : ""
+    });
+  }
+
+  updateDisplay();
+};
+
+
+    function updateDisplay() {
+      const list = document.getElementById("orderList");
+      const total = document.getElementById("totalPrice");
+      const emptyCart = document.getElementById("emptyCart");
+      
+      list.innerHTML = "";
+      let totalPrice = 0;
+
+      if (cart.length === 0) {
+        emptyCart.style.display = 'block';
+        list.style.display = 'none';
+        total.innerText = '0.00';
+        return;
+      }
+
+      emptyCart.style.display = 'none';
+      list.style.display = 'block';
+
+      cart.forEach((item, index) => {
+        const unitPrice = item.price + (item.isBungkus ? 0.5 : 0);
+        totalPrice += unitPrice * item.qty;
+
+        const noteHtml = item.note ? `<div class="cart-item-note">Note: ${item.note}</div>` : "";
+
+        const li = document.createElement("li");
+        li.className = "cart-item";
+        li.innerHTML = `
+          <div class="cart-item-header">
+            <div class="cart-item-name">${item.name}</div>
+            <div class="cart-item-price">RM ${(item.price + (item.isBungkus ? 0.5 : 0)).toFixed(2)}</div>
+          </div>
+          ${noteHtml}
+          <div class="cart-item-qty">
+            <button class="qty-btn" onclick="changeQty(${index}, -1)">−</button>
+            <div class="qty-display">${item.qty}</div>
+            <button class="qty-btn" onclick="changeQty(${index}, 1)">+</button>
+          </div>
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+            <button class="remove-btn" style="flex:1; background:#e3f2fd; color:#667eea; border-color:#b3e5fc;" title="Add note" onclick="openNote('${item.name}')">📝 Note</button>
+            <button class="remove-btn" style="flex:1;" onclick="removeItem('${item.name}')">🗑️ Remove</button>
+          </div>
+        `;
+        list.appendChild(li);
+      });
+
+      total.innerText = totalPrice.toFixed(2);
+    }
+
+    function changeQty(index, change) {
+      cart[index].qty += change;
+      if (cart[index].qty < 1) cart.splice(index, 1);
+      updateDisplay();
+    }
+
+    function removeItem(name) {
+      cart = cart.filter(item => item.name !== name);
+      updateDisplay();
+    }
+
+    function clearOrder() {
+      cart = [];
+      updateDisplay();
+    }
+
+    // 📝 Notes
+    function openNote(name) {
+      noteTargetName = name;
+      const target = cart.find(it => it.name === name);
+      document.getElementById('noteText').value = target?.note || "";
+      const modal = new bootstrap.Modal(document.getElementById('noteModal'));
+      modal.show();
+
+      document.getElementById('saveNoteBtn').onclick = () => {
+        const txt = document.getElementById('noteText').value.trim();
+        const it = cart.find(i => i.name === noteTargetName);
+        if (it) it.note = txt;
+        modal.hide();
+        updateDisplay();
+      };
+    }
+   function toggleBungkus(index) {
+  cart[index].isBungkus = !cart[index].isBungkus;
+
+  if (cart[index].isBungkus) {
+    // append Bungkus note (if not already inside)
+    if (!cart[index].note.includes("Bungkus")) {
+      cart[index].note = (cart[index].note ? cart[index].note + " · " : "") + "Bungkus";
+    }
+  } else {
+    // remove Bungkus note when un-toggled
+    cart[index].note = cart[index].note.replace(/Bungkus/gi, "").replace(/ · $/, "").trim();
+  }
+
+  updateDisplay();
+}
+
+
+    function appendQuickNote(txt) {
+      const ta = document.getElementById('noteText');
+      ta.value = (ta.value ? ta.value + " · " : "") + txt;
+    }
+
+async function mergeIntoExisting(activeOrderId, orderData) {
+  const db = window.db, rid = window.restaurantId;
+  const orderRef = window.doc(db, `restaurants/${rid}/orders`, activeOrderId);
+
+  await window.runTransaction(db, async (tx) => {
+    const snap = await tx.get(orderRef);
+    if (!snap.exists()) throw new Error("Existing order not found.");
+
+    const existing = snap.data();
+    const items = Array.isArray(existing.items) ? [...existing.items] : [];
+
+    // merge: name + unitPrice + note
+    for (const ni of orderData.items) {
+      const i = items.findIndex(it =>
+        it.name === ni.name &&
+        Number(it.unitPrice ?? it.price) === Number(ni.unitPrice) &&
+        (it.note || "") === (ni.note || "")
+      );
+
+// Always push as a new row (don’t merge with existing)
+items.push({
+  ...ni,
+  kds: {},            // reset KDS state for kitchen
+  batch: Date.now()   // optional: mark this order batch
+});
+
+
+    }
+
+    // ✅ IMPORTANT: reset section flags + force status back to active
+    tx.update(orderRef, {
+      items,
+      kds: {},                 // clear all done flags
+      status: "active",        // reopen if it was completed
+      updatedAt: window.serverTimestamp()
+    });
+  });
+}
+
+
+async function createNewTicket(orderData) {
+  const db = window.db, rid = window.restaurantId;
+
+  const newOrderId = await window.runTransaction(db, async (tx) => {
+    const counterRef = window.doc(db, `restaurants/${rid}/meta`, "orderCounter");
+    const counterSnap = await tx.get(counterRef);
+    const current = counterSnap.exists() ? (counterSnap.data().count || 0) : 0;
+    const next = current + 1;
+    const prettyId = `ORD-${String(next).padStart(5, "0")}`;
+
+    const orderRef = window.doc(db, `restaurants/${rid}/orders`, prettyId);
+    const tableRef = window.doc(db, `restaurants/${rid}/tables/${window.selectedTableId}`);
+
+    // increment order counter
+    tx.set(counterRef, { count: next }, { merge: true });
+
+    // create the new order
+    tx.set(orderRef, {
+      ...orderData,
+      orderId: prettyId,
+      createdAt: window.serverTimestamp(),
+      updatedAt: window.serverTimestamp()
+    });
+
+    // ✅ keep the table in "ordered" (red) state for ALL new tickets
+    tx.update(tableRef, {
+      status: "ordered",
+      activeOrderId: prettyId, // always update to latest ticket ID
+      updatedAt: window.serverTimestamp()
+    });
+
+    return prettyId;
+  });
+
+  return newOrderId;
+}
+
+function inferSectionFromName(name) {
+  const n = name.toLowerCase();
+  const drinkKW = [
+    "teh", "milo", "kopi", "nescafe", "neslo", "sirap", "limau", "joss", "extra joss",
+    "air panas", "air suam", "air kosong", "bandung", "horlicks", "coklat", "chocolate",
+    "3 layer", "mocha", "drink", "ais", "o ais", "bersusu", "lemon", "tapai"
+  ];
+
+  if (n.includes("goreng")) return "goreng";
+  if (n.includes("sup")) return "sup";
+  if (drinkKW.some(k => n.includes(k))) return "drinks";
+  return "sup"; // fallback
+}
+
+
+
+async function submitOrder() {
+  if (!window.selectedTable || !window.selectedTableId || cart.length === 0) {
+    alert("Please select a table and add items.");
+    return;
+  }
+
+  // 1) decide if this is a bungkus slot
+  const isBungkus =
+    (window.selectedTable?.type === "bungkus") ||
+    (/^B(ungkus)?\s*\d+$/i.test(String(window.selectedTable?.name || ""))) ||
+    (/^B\d+$/i.test(String(window.selectedTableId || "")));
+
+  // 2) nice label for display (e.g. "B1" or "T12")
+  const label =
+    window.selectedTableLabel ||
+    (isBungkus
+      ? (window.selectedTable?.name || String(window.selectedTableId))
+      : `T${window.selectedTableNumber}`);
+
+  // 3) payload to store
+  const orderData = {
+    table: label,
+    tableNumber: isBungkus ? null : window.selectedTableNumber,
+items: cart.map(i => ({
+  name: i.name,
+  unitPrice: Number(i.price) + (i.isBungkus ? 0.50 : 0),
+  qty: Number(i.qty) || 0,
+  note: i.note || (i.isBungkus ? "bungkus" : ""),
+  section: inferSectionFromName(i.name) // ✅ include this!
+})),
+
+    status: "open",
+  };
+
+  const activeOrderId = window.selectedTable.activeOrderId || null;
+
+  try {
+    if (activeOrderId) {
+      const orderRef = doc(db, `restaurants/${restaurantId}/orders/${activeOrderId}`);
+      const orderSnap = await getDoc(orderRef);
+      const orderStatus = orderSnap.exists() ? (orderSnap.data().status || "") : "";
+
+      if (["open", "active"].includes(orderStatus)) {
+        // ✅ merge into the current active ticket
+        await mergeIntoExisting(activeOrderId, orderData);
+
+        alert("Order merged into existing ticket!");
+        clearOrder();
+        document.querySelectorAll('#tableButtons button').forEach(b => b.classList.remove("active"));
+        window.selectedTable = null;
+        window.selectedTableId = null;
+        window.selectedTableNumber = null;
+        document.getElementById("tableNumber").value = "";
+        document.getElementById("selectedTable").innerText = "";
+        updateDisplay();
+        return; // ✅ STOP here after merging
+      } else {
+        // 🔴 old ticket was completed/cancelled → create new ticket
+        const newId = await createNewTicket(orderData);
+        alert("New order created: " + newId);
+      }
+    } else {
+      // first ticket for this table → create and set activeOrderId on the table
+      const rid = window.restaurantId, db = window.db;
+      await window.runTransaction(db, async (tx) => {
+        const counterRef = window.doc(db, `restaurants/${rid}/meta`, "orderCounter");
+        const counterSnap = await tx.get(counterRef);
+        const current = counterSnap.exists() ? (counterSnap.data().count || 0) : 0;
+        const next = current + 1;
+        const prettyId = `ORD-${String(next).padStart(5, "0")}`;
+
+        const orderRef = window.doc(db, `restaurants/${rid}/orders`, prettyId);
+        const tableRef = window.doc(db, `restaurants/${rid}/tables/${window.selectedTableId}`);
+
+        tx.set(counterRef, { count: next }, { merge: true });
+        tx.set(orderRef, {
+          ...orderData,
+          orderId: prettyId,
+          createdAt: window.serverTimestamp(),
+          updatedAt: window.serverTimestamp()
+        });
+        tx.update(tableRef, {
+          status: "ordered",
+          activeOrderId: prettyId,
+          updatedAt: window.serverTimestamp()
+        });
+      });
+      alert("Order sent successfully!");
+    }
+
+    // cleanup after success
+    clearOrder();
+    document.querySelectorAll('#tableButtons button').forEach(b => b.classList.remove("active"));
+    window.selectedTable = null;
+    window.selectedTableId = null;
+    window.selectedTableNumber = null;
+    document.getElementById("tableNumber").value = "";
+    document.getElementById("selectedTable").innerText = "";
+  } catch (e) {
+    console.error("[SUBMIT ORDER FAILED]", e);
+    alert("Failed to send order: " + (e.message || e.code));
+  }
+}
+
+    updateDisplay();    
+
+</script>
+
+
+
+  
+
+
+  </script>
+
+  <!-- 📝 Note Modal -->
+  <div class="modal fade" id="noteModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content p-3">
+        <h5 class="mb-2">📝 Item Note</h5>
+
+        <div class="d-flex flex-wrap gap-2 mb-2">
+          <button class="btn btn-sm btn-outline-secondary" onclick="appendQuickNote('Tak pedas')">Tak pedas</button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="appendQuickNote('Tak sayur')">Tak sayur</button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="appendQuickNote('No bawang')">No bawang</button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="appendQuickNote('Kurang manis')">Kurang manis</button>
+        </div>
+
+        <textarea id="noteText" class="form-control" rows="3" placeholder="Contoh: kurang garam, no cili..."></textarea>
+
+        <div class="d-grid mt-3">
+          <button class="btn btn-primary" id="saveNoteBtn">Save Note</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Existing order options -->
+<div class="modal fade" id="existingOrderModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">This table already has an order</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        What would you like to do?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="btnNewTicket">Start New Order</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
