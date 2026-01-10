@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Bihun Sup Daging Selambak - POS System
 
 Restaurant Point of Sale system built with HTML, JavaScript, and Firebase.
@@ -76,3 +77,7 @@ public/
 ## Security
 
 ⚠️ **Important**: Never commit `firebase-config.esm.js` or `firebase-config.js` to Git. These files contain your API keys and are excluded via `.gitignore`.
+=======
+# fyp_smartrestaurant
+pos system kedai bihun sup daging selambak
+>>>>>>> 1d65439fe63ac21ba0036595c5c62c56dc60a3ed
