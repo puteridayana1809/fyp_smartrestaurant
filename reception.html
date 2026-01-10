@@ -11,8 +11,9 @@
        CSS VARIABLES & RESET
     ======================================== */
     :root {
-      --primary-yellow: #F5C518;
-      --primary-dark: #1a1a2e;
+      --kedah-green: #2d5016;
+      --kedah-light: #4a7c23;
+      --kedah-yellow: #f5c518;
       --accent-green: #22c55e;
       --accent-red: #ef4444;
       --accent-blue: #3b82f6;
@@ -34,10 +35,10 @@
        HEADER
     ======================================== */
     .header {
-      background: linear-gradient(135deg, var(--primary-dark) 0%, #2d3561 100%);
+      background: linear-gradient(135deg, var(--kedah-green) 0%, var(--kedah-light) 100%);
       color: white;
       padding: 1rem 1.5rem;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      box-shadow: 0 4px 20px rgba(45, 80, 22, 0.3);
       position: sticky;
       top: 0;
       z-index: 100;
@@ -60,7 +61,7 @@
     .header-brand .logo {
       width: 42px;
       height: 42px;
-      background: var(--primary-yellow);
+      background: var(--kedah-yellow);
       border-radius: 10px;
       display: flex;
       align-items: center;
@@ -68,7 +69,7 @@
     }
 
     .header-brand .logo i {
-      color: var(--primary-dark);
+      color: var(--kedah-green);
       font-size: 1.3rem;
     }
 
@@ -138,7 +139,7 @@
     }
 
     .section-header {
-      background: var(--primary-dark);
+      background: linear-gradient(135deg, var(--kedah-green), var(--kedah-light));
       color: white;
       padding: 1rem 1.25rem;
       font-size: 1rem;
@@ -149,7 +150,7 @@
     }
 
     .section-header i {
-      color: var(--primary-yellow);
+      color: var(--kedah-yellow);
     }
 
     /* ========================================
@@ -202,9 +203,9 @@
     }
 
     .btn-table.selected {
-      outline: 4px solid var(--primary-dark);
+      outline: 4px solid var(--kedah-green);
       outline-offset: 2px;
-      box-shadow: 0 0 0 6px rgba(26,26,46,0.15);
+      box-shadow: 0 0 0 6px rgba(45, 80, 22, 0.2);
     }
 
     /* ========================================
@@ -270,7 +271,7 @@
     .info-value {
       font-size: 1.1rem;
       font-weight: 700;
-      color: var(--primary-dark);
+      color: var(--kedah-green);
     }
 
     /* ========================================
@@ -303,12 +304,12 @@
       background: white;
       margin: 5px;
       border-radius: 8px;
-      border-left: 3px solid var(--primary-yellow);
+      border-left: 3px solid var(--kedah-yellow);
       font-size: 0.85rem;
     }
 
     .item-qty {
-      background: var(--primary-dark);
+      background: var(--kedah-green);
       color: white;
       min-width: 24px;
       height: 24px;
@@ -369,7 +370,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 14px 16px;
-      background: linear-gradient(135deg, var(--primary-dark) 0%, #2d3561 100%);
+      background: linear-gradient(135deg, var(--kedah-green) 0%, var(--kedah-light) 100%);
       border-radius: 12px;
       color: white;
       margin-top: 10px;
@@ -426,13 +427,13 @@
     }
 
     .btn-payment:hover {
-      border-color: var(--primary-dark);
+      border-color: var(--kedah-green);
     }
 
     .btn-payment.active {
-      background: var(--primary-dark);
+      background: var(--kedah-green);
       color: white;
-      border-color: var(--primary-dark);
+      border-color: var(--kedah-green);
     }
 
     .btn-complete {
@@ -498,7 +499,7 @@
 
     .payment-order {
       font-weight: 600;
-      color: var(--primary-dark);
+      color: var(--kedah-green);
       width: 90px;
       font-family: monospace;
       font-size: 0.75rem;

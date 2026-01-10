@@ -142,8 +142,26 @@ btn.onclick = () => {
   window.selectedTableLabel  = label;
 
   document.getElementById('tableNumber').value = isB ? label : (t.number ?? '');
-  const st = document.getElementById('selectedTable');
-  if (st) st.innerText = label;
+  
+  // Update selected table label in header
+  const labelEl = document.getElementById('selectedTableLabel');
+  if (labelEl) labelEl.innerText = `— ${label}`;
+  
+  // Collapse table section
+  const content = document.getElementById('tableSectionContent');
+  const toggle = document.querySelector('.section-toggle');
+  if (content && toggle) {
+    content.classList.add('collapsed');
+    toggle.classList.add('collapsed');
+  }
+  
+  // Auto scroll to menu section
+  setTimeout(() => {
+    const menuSection = document.querySelector('.menu-section');
+    if (menuSection) {
+      menuSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, 100);
 };
 
   tableContainer.appendChild(btn);
@@ -217,10 +235,21 @@ btn.onclick = () => {
               const price = formatRM(it.price);
               const isAvailable = it.isAvailable !== false;
 
+              // Build image HTML
+              let imageHTML = '';
+              if (it.imageUrl) {
+                imageHTML = `<img src="${it.imageUrl}" alt="${it.name}" class="menu-item-image" />`;
+              } else {
+                imageHTML = `<div class="menu-item-no-image">🍜</div>`;
+              }
+
               card.innerHTML = `
-                <div class="menu-item-name">${it.name}</div>
-                <div class="menu-item-price">${price}</div>
-                ${!isAvailable ? '<div style="color:#dc3545; font-size:0.85rem; margin-top:0.5rem;">Out of Stock</div>' : ''}
+                ${imageHTML}
+                <div class="menu-item-details">
+                  <div class="menu-item-name">${it.name}</div>
+                  <div class="menu-item-price">${price}</div>
+                  ${!isAvailable ? '<div style="color:#dc3545; font-size:0.85rem; margin-top:0.5rem; font-weight:600;">Habis</div>' : ''}
+                </div>
               `;
 
               if (isAvailable) {
@@ -277,22 +306,30 @@ btn.onclick = () => {
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
 
   <style>
+    :root {
+      --kedah-green: #2d5016;
+      --kedah-light: #4a7c23;
+      --kedah-yellow: #f5c518;
+      --bg-light: #f8faf7;
+      --white: #ffffff;
+    }
+    
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    
     body { 
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+      background: linear-gradient(135deg, #e8f5e9 0%, #f1f8f4 100%);
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       min-height: 100vh;
       padding: 0;
     }
     
     .header {
-      background: rgba(255,255,255,0.95);
-      padding: 1rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      background: linear-gradient(135deg, var(--kedah-green), var(--kedah-light));
+      padding: 1.2rem;
+      box-shadow: 0 4px 12px rgba(45, 80, 22, 0.2);
       position: sticky;
       top: 0;
       z-index: 100;
-      backdrop-filter: blur(10px);
     }
     
     .header-content {
@@ -306,8 +343,25 @@ btn.onclick = () => {
     .header h2 {
       font-size: 1.8rem;
       font-weight: 700;
-      color: #f59e0b;
+      color: var(--kedah-yellow);
       margin: 0;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    #logoutBtn {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 2px solid white;
+      padding: 0.6rem 1.5rem;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    #logoutBtn:hover {
+      background: white;
+      color: var(--kedah-green);
     }
     
     .main-container {
@@ -323,15 +377,51 @@ btn.onclick = () => {
     .tables-section {
       background: white;
       border-radius: 16px;
-      padding: 1.5rem;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      padding: 0;
+      box-shadow: 0 8px 24px rgba(45, 80, 22, 0.08);
       margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+    
+    .table-section-header {
+      padding: 1.5rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: white;
+      transition: background 0.3s;
+    }
+    
+    .table-section-header:hover {
+      background: #f8faf7;
+    }
+    
+    .table-section-content {
+      padding: 0 1.5rem 1.5rem 1.5rem;
+      max-height: 1000px;
+      overflow: hidden;
+      transition: max-height 0.4s ease, padding 0.4s ease;
+    }
+    
+    .table-section-content.collapsed {
+      max-height: 0;
+      padding: 0 1.5rem;
+    }
+    
+    .section-toggle {
+      font-size: 1.2rem;
+      transition: transform 0.3s;
+    }
+    
+    .section-toggle.collapsed {
+      transform: rotate(-90deg);
     }
     
     .section-title {
       font-size: 1.1rem;
       font-weight: 600;
-      color: #1e293b;
+      color: var(--kedah-green);
       margin-bottom: 1rem;
       display: flex;
       align-items: center;
@@ -352,14 +442,12 @@ btn.onclick = () => {
       border-radius: 12px;
       cursor: pointer;
       transition: all 0.3s ease;
-      background: #f8fafc;
-      color: #475569;
     }
     
     #tableButtons button.btn-success {
-      background: #10b981;
+      background: var(--kedah-light);
       color: white;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      box-shadow: 0 4px 12px rgba(74, 124, 35, 0.3);
     }
     
     #tableButtons button.btn-danger {
@@ -369,26 +457,27 @@ btn.onclick = () => {
     }
     
     #tableButtons button.active {
-      border: 2px solid #f59e0b;
-      box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2);
+      border: 3px solid var(--kedah-yellow);
+      box-shadow: 0 0 0 4px rgba(245, 197, 24, 0.2);
+      transform: scale(1.05);
     }
     
     .menu-section {
       background: white;
       border-radius: 16px;
       overflow: hidden;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      box-shadow: 0 8px 24px rgba(45, 80, 22, 0.08);
       display: flex;
       flex-direction: column;
     }
     
     .menu-header {
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      background: linear-gradient(135deg, var(--kedah-green), var(--kedah-light));
       color: white;
       padding: 1.5rem;
       font-size: 1.3rem;
       font-weight: 700;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
     
     #selectedTable {
@@ -401,81 +490,114 @@ btn.onclick = () => {
     .menu-content {
       flex: 1;
       overflow-y: auto;
-      padding: 1.5rem;
-      max-height: 600px;
+      padding: 1rem;
+      max-height: 65vh;
     }
     
     .accordion-item {
       border: none;
-      background: #f8fafc;
-      margin-bottom: 0.8rem;
+      background: #f8faf7;
+      margin-bottom: 0.75rem;
       border-radius: 12px;
       overflow: hidden;
       transition: all 0.3s ease;
     }
     
     .accordion-item:hover {
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      box-shadow: 0 4px 12px rgba(45, 80, 22, 0.1);
     }
     
     .accordion-button {
-      background: #f8fafc;
+      background: #f8faf7;
       border: none;
       font-weight: 600;
-      color: #1e293b;
-      padding: 1rem;
-      font-size: 1rem;
+      color: var(--kedah-green);
+      padding: 0.9rem 1rem;
+      font-size: 0.95rem;
     }
     
     .accordion-button:not(.collapsed) {
-      background: #f59e0b;
+      background: linear-gradient(135deg, var(--kedah-green), var(--kedah-light));
       color: white;
     }
     
     .accordion-body {
-      padding: 1rem;
+      padding: 0.75rem;
       background: white;
     }
     
     .menu-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 1rem;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 0.75rem;
     }
     
     .menu-item {
       background: white;
-      border: 2px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 1rem;
+      border: 2px solid #e8f5e9;
+      border-radius: 10px;
+      overflow: hidden;
       cursor: pointer;
       transition: all 0.3s ease;
-      text-align: center;
+      display: flex;
+      flex-direction: column;
     }
     
     .menu-item:hover {
-      border-color: #f59e0b;
-      box-shadow: 0 8px 16px rgba(245, 158, 11, 0.2);
-      transform: translateY(-4px);
+      border-color: var(--kedah-yellow);
+      box-shadow: 0 6px 12px rgba(45, 80, 22, 0.12);
+      transform: translateY(-3px);
+    }
+    
+    .menu-item-image {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      background: linear-gradient(135deg, #f1f8f4, #e8f5e9);
+    }
+    
+    .menu-item-no-image {
+      width: 100%;
+      height: 120px;
+      background: linear-gradient(135deg, #e8f5e9, #f1f8f4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      color: var(--kedah-light);
+      opacity: 0.5;
+    }
+    
+    .menu-item-details {
+      padding: 0.75rem;
+      text-align: center;
     }
     
     .menu-item-name {
       font-weight: 600;
-      color: #1e293b;
-      margin-bottom: 0.5rem;
-      font-size: 0.95rem;
+      color: var(--kedah-green);
+      margin-bottom: 0.4rem;
+      font-size: 0.85rem;
+      line-height: 1.3;
+      min-height: 2.2em;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
     
     .menu-item-price {
-      color: #f59e0b;
-      font-size: 1.3rem;
+      color: var(--kedah-yellow);
+      font-size: 1.1rem;
       font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.1);
     }
     
     .cart-sidebar {
       background: white;
       border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      box-shadow: 0 8px 24px rgba(45, 80, 22, 0.08);
       display: flex;
       flex-direction: column;
       height: fit-content;
@@ -484,13 +606,13 @@ btn.onclick = () => {
     }
     
     .cart-header {
-      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      background: linear-gradient(135deg, var(--kedah-green), var(--kedah-light));
       color: white;
       padding: 1.5rem;
       font-size: 1.2rem;
       font-weight: 700;
       border-radius: 16px 16px 0 0;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
     
     .cart-content {
@@ -505,75 +627,171 @@ btn.onclick = () => {
     }
     
     .cart-item {
-      background: #f8fafc;
+      background: white;
       padding: 1rem;
-      border-radius: 10px;
-      margin-bottom: 0.8rem;
-      border-left: 4px solid #f59e0b;
-      font-size: 0.9rem;
+      border-radius: 12px;
+      margin-bottom: 0.75rem;
+      border: 2px solid #e8f5e9;
+      box-shadow: 0 2px 8px rgba(45, 80, 22, 0.06);
+      transition: all 0.2s;
+    }
+    
+    .cart-item:hover {
+      border-color: var(--kedah-yellow);
+      box-shadow: 0 4px 12px rgba(45, 80, 22, 0.1);
     }
     
     .cart-item-header {
       display: flex;
       justify-content: space-between;
-      align-items: start;
-      margin-bottom: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      gap: 0.5rem;
+      text-align: center;
     }
     
     .cart-item-name {
       font-weight: 600;
-      color: #1e293b;
+      color: var(--kedah-green);
+      font-size: 0.9rem;
+      flex: 1;
+      text-align: left;
     }
     
     .cart-item-price {
-      color: #f59e0b;
+      color: var(--kedah-yellow);
       font-weight: 700;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      text-align: right;
     }
     
     .cart-item-qty {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      margin-top: 0.5rem;
+      justify-content: center;
+      gap: 0.75rem;
+      background: #f8faf7;
+      padding: 0.5rem;
+      border-radius: 8px;
+      margin: 0.75rem auto;
+      max-width: 200px;
     }
     
     .qty-btn {
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      height: 28px;
       border: none;
-      background: #f59e0b;
+      background: var(--kedah-light);
       color: white;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 0.8rem;
+      font-size: 0.9rem;
       font-weight: bold;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .qty-btn:hover {
+      background: var(--kedah-green);
+      transform: scale(1.1);
     }
     
     .qty-display {
       flex: 1;
       text-align: center;
       font-weight: 600;
-      color: #475569;
+      color: var(--kedah-green);
+      font-size: 0.95rem;
     }
     
     .cart-item-note {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       color: #64748b;
       margin-top: 0.5rem;
+      padding: 0.4rem 0.6rem;
+      background: #f1f5f9;
+      border-radius: 6px;
       font-style: italic;
     }
     
-    .remove-btn {
-      width: 100%;
+    .cart-item-actions {
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    
+    .cart-item-actions.show {
+      display: grid;
+    }
+    
+    .edit-btn-container {
+      display: flex;
+      justify-content: flex-end;
       margin-top: 0.5rem;
-      padding: 0.4rem;
+    }
+    
+    .edit-btn {
+      padding: 0.4rem 0.8rem;
+      border: 2px solid var(--kedah-light);
+      background: white;
+      color: var(--kedah-green);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    
+    .edit-btn:hover {
+      background: var(--kedah-light);
+      color: white;
+      transform: translateY(-1px);
+    }
+    
+    .edit-btn.active {
+      background: var(--kedah-green);
+      color: white;
+    }
+    
+    .note-btn, .remove-btn {
+      padding: 0.5rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+    }
+    
+    .note-btn {
+      background: #e3f2fd;
+      color: #1976d2;
+      border: 1px solid #bbdefb;
+    }
+    
+    .note-btn:hover {
+      background: #bbdefb;
+    }
+    
+    .remove-btn {
       background: #fee;
       color: #dc3545;
       border: 1px solid #fcc;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      font-weight: 600;
+    }
+    
+    .remove-btn:hover {
+      background: #fcc;
     }
     
     .cart-footer {
@@ -587,15 +805,19 @@ btn.onclick = () => {
     
     .total-label {
       color: #64748b;
-      font-size: 0.95rem;
-      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 0.3rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     
     .total-price {
-      font-size: 1.8rem;
-      font-weight: 700;
-      color: #f59e0b00;
-      color: #667eea;
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--kedah-green);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      letter-spacing: -0.5px;
     }
     
     .action-buttons {
@@ -615,14 +837,14 @@ btn.onclick = () => {
     }
     
     .btn-submit {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      background: linear-gradient(135deg, var(--kedah-green), var(--kedah-light));
       color: white;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      box-shadow: 0 4px 12px rgba(45, 80, 22, 0.3);
     }
     
     .btn-submit:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+      box-shadow: 0 6px 20px rgba(45, 80, 22, 0.4);
     }
     
     .btn-clear {
@@ -649,21 +871,58 @@ btn.onclick = () => {
       transform: translateY(-2px);
     }
     
+    @media (max-width: 1280px) {
+      .menu-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      }
+    }
+    
     @media (max-width: 1024px) {
       .main-container {
         grid-template-columns: 1fr;
+        gap: 1.5rem;
       }
       .cart-sidebar {
         position: static;
+        max-width: 100%;
+      }
+      .menu-content {
+        max-height: 500px;
       }
     }
     
     @media (max-width: 768px) {
+      .main-container {
+        padding: 1rem 0.75rem;
+      }
       #tableButtons {
         grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+        gap: 0.6rem;
       }
       .menu-grid {
         grid-template-columns: repeat(2, 1fr);
+        gap: 0.6rem;
+      }
+      .menu-item-image, .menu-item-no-image {
+        height: 100px;
+      }
+      .menu-item-name {
+        font-size: 0.8rem;
+      }
+      .menu-item-price {
+        font-size: 1rem;
+      }
+      .header h2 {
+        font-size: 1.4rem;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .menu-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      #tableButtons {
+        grid-template-columns: repeat(3, 1fr);
       }
     }
     
@@ -680,7 +939,7 @@ btn.onclick = () => {
   <!-- HEADER -->
   <div class="header">
     <div class="header-content">
-      <h2>POS Order System</h2>
+      <h2>Waiter Section</h2>
       <button id="logoutBtn" class="btn-logout">Logout</button>
     </div>
   </div>
@@ -691,10 +950,14 @@ btn.onclick = () => {
     <div>
       <!-- TABLE SELECTION -->
       <div class="tables-section">
-        <div class="section-title">Select Table / Bungkus</div>
-        <div id="tableButtons"></div>
-        <input type="hidden" id="tableNumber" />
-        <p id="selectedTable" style="font-size: 0.9rem; margin-top: 1rem;"></p>
+        <div class="table-section-header" onclick="toggleTableSection()">
+          <div class="section-title" style="margin: 0;">Select Table / Bungkus <span id="selectedTableLabel" style="color: var(--kedah-yellow); font-weight: 700;"></span></div>
+          <span class="section-toggle">▼</span>
+        </div>
+        <div class="table-section-content" id="tableSectionContent">
+          <div id="tableButtons"></div>
+          <input type="hidden" id="tableNumber" />
+        </div>
       </div>
 
       <!-- MENU -->
@@ -728,6 +991,16 @@ btn.onclick = () => {
 
   <!-- 🔧 Non-module script: cart + submit (unchanged except exposing addItem globally) -->
   <script>
+    // Toggle table section
+    function toggleTableSection() {
+      const content = document.getElementById('tableSectionContent');
+      const toggle = document.querySelector('.section-toggle');
+      if (content && toggle) {
+        content.classList.toggle('collapsed');
+        toggle.classList.toggle('collapsed');
+      }
+    }
+    
     let cart = [];
     let noteTargetName = null;
 
@@ -793,9 +1066,12 @@ window.addItem = function(name, price) {
             <div class="qty-display">${item.qty}</div>
             <button class="qty-btn" onclick="changeQty(${index}, 1)">+</button>
           </div>
-          <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
-            <button class="remove-btn" style="flex:1; background:#e3f2fd; color:#667eea; border-color:#b3e5fc;" title="Add note" onclick="openNote('${item.name}')">📝 Note</button>
-            <button class="remove-btn" style="flex:1;" onclick="removeItem('${item.name}')">🗑️ Remove</button>
+          <div class="edit-btn-container">
+            <button class="edit-btn" onclick="toggleActions(${index})">✏️ Edit</button>
+          </div>
+          <div class="cart-item-actions" id="actions-${index}">
+            <button class="note-btn" onclick="openNote('${item.name}')">📝 Note</button>
+            <button class="remove-btn" onclick="removeItem('${item.name}')">🗑️ Remove</button>
           </div>
         `;
         list.appendChild(li);
@@ -808,6 +1084,21 @@ window.addItem = function(name, price) {
       cart[index].qty += change;
       if (cart[index].qty < 1) cart.splice(index, 1);
       updateDisplay();
+    }
+
+    function toggleActions(index) {
+      const actionsDiv = document.getElementById(`actions-${index}`);
+      const allActions = document.querySelectorAll('.cart-item-actions');
+      
+      // Close all other actions
+      allActions.forEach((action, i) => {
+        if (action.id !== `actions-${index}`) {
+          action.classList.remove('show');
+        }
+      });
+      
+      // Toggle current
+      actionsDiv.classList.toggle('show');
     }
 
     function removeItem(name) {
@@ -1004,7 +1295,8 @@ items: cart.map(i => ({
         window.selectedTableId = null;
         window.selectedTableNumber = null;
         document.getElementById("tableNumber").value = "";
-        document.getElementById("selectedTable").innerText = "";
+        const labelEl = document.getElementById("selectedTableLabel");
+        if (labelEl) labelEl.innerText = "";
         updateDisplay();
         return; // ✅ STOP here after merging
       } else {
@@ -1048,7 +1340,8 @@ items: cart.map(i => ({
     window.selectedTableId = null;
     window.selectedTableNumber = null;
     document.getElementById("tableNumber").value = "";
-    document.getElementById("selectedTable").innerText = "";
+    const labelEl = document.getElementById("selectedTableLabel");
+    if (labelEl) labelEl.innerText = "";
   } catch (e) {
     console.error("[SUBMIT ORDER FAILED]", e);
     alert("Failed to send order: " + (e.message || e.code));
