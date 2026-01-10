@@ -11,14 +11,16 @@
 
   <style>
     :root {
-      --primary-blue: #1e3a8a; /* Navy Blue */
-      --accent-blue: #3b82f6;  /* Royal Blue */
-      --bg-light: #f8fafc;
-      --text-main: #1e293b;
-      --text-muted: #64748b;
+      --kedah-green: #2d5016; /* Hijau Kedah gelap */
+      --kedah-light: #4a7c23; /* Hijau Kedah cerah */
+      --kedah-yellow: #f5c518; /* Kuning padi */
+      --bg-light: #f8faf7;
+      --text-main: #1a1a1a;
+      --text-muted: #5a6c57;
       --white: #ffffff;
     }
 
+    
     * {
       font-family: 'Plus Jakarta Sans', sans-serif;
       box-sizing: border-box;
@@ -27,8 +29,8 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background-color: #f1f5f9;
-      background-image: radial-gradient(var(--primary-blue) 0.5px, transparent 0.5px);
+      background-color: #e8f5e9;
+      background-image: radial-gradient(var(--kedah-green) 0.5px, transparent 0.5px);
       background-size: 24px 24px;
       display: flex;
       align-items: center;
@@ -44,14 +46,13 @@
       background: var(--white);
       border-radius: 24px;
       overflow: hidden;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 25px 50px -12px rgba(45, 80, 22, 0.15);
     }
 
     /* Left Side: Branding */
     .brand-side {
       flex: 1.1;
-      background: linear-gradient(135deg, rgba(30, 58, 138, 0.92), rgba(30, 58, 138, 0.8)), 
-                  url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1000&auto=format&fit=crop');
+      background: url('./assets/images/bihun_sup.jpeg');
       background-size: cover;
       background-position: center;
       padding: 60px;
@@ -59,12 +60,29 @@
       flex-direction: column;
       justify-content: center;
       color: var(--white);
+      position: relative;
+    }
+
+    .brand-side::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(45, 80, 22, 0.80), rgba(0, 0, 0, 0));
+      z-index: 1;
+    }
+
+    .brand-side > * {
+      position: relative;
+      z-index: 2;
     }
 
     .logo-badge {
       width: 65px;
       height: 65px;
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(245, 197, 24, 0.2);
       backdrop-filter: blur(10px);
       border-radius: 18px;
       display: flex;
@@ -72,7 +90,7 @@
       justify-content: center;
       font-size: 32px;
       margin-bottom: 25px;
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      border: 2px solid var(--kedah-yellow);
     }
 
     .brand-title {
@@ -97,12 +115,13 @@
     }
 
     .tag {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(245, 197, 24, 0.25);
       padding: 6px 14px;
       border-radius: 50px;
       font-size: 12px;
       font-weight: 500;
       backdrop-filter: blur(5px);
+      border: 1px solid rgba(245, 197, 24, 0.4);
     }
 
     /* Right Side: Form */
@@ -117,7 +136,7 @@
 
     .form-header h2 {
       font-weight: 800;
-      color: var(--primary-blue);
+      color: var(--kedah-green);
       font-size: 30px;
       margin-bottom: 5px;
     }
@@ -145,7 +164,7 @@
     .form-control, .form-select {
       width: 100%;
       padding: 14px 16px;
-      background: #f1f5f9;
+      background: #f1f8f4;
       border: 2px solid transparent;
       border-radius: 12px;
       font-size: 15px;
@@ -155,8 +174,8 @@
     .form-control:focus, .form-select:focus {
       outline: none;
       background: var(--white);
-      border-color: var(--accent-blue);
-      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+      border-color: var(--kedah-light);
+      box-shadow: 0 0 0 4px rgba(74, 124, 35, 0.1);
     }
 
     .password-wrapper {
@@ -170,7 +189,7 @@
       transform: translateY(-50%);
       background: none;
       border: none;
-      color: var(--accent-blue);
+      color: var(--kedah-light);
       font-size: 12px;
       font-weight: 700;
       cursor: pointer;
@@ -179,7 +198,7 @@
     .btn-login {
       width: 100%;
       padding: 16px;
-      background: var(--primary-blue);
+      background: linear-gradient(135deg, var(--kedah-green), var(--kedah-light));
       color: white;
       border: none;
       border-radius: 12px;
@@ -191,12 +210,12 @@
       justify-content: center;
       gap: 10px;
       margin-top: 10px;
-      transition: transform 0.2s, background 0.2s;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
 
     .btn-login:hover {
-      background: var(--accent-blue);
       transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(45, 80, 22, 0.25);
     }
 
     .remember-row {
@@ -209,7 +228,7 @@
     .remember-row input[type="checkbox"] {
       width: 18px;
       height: 18px;
-      accent-color: var(--primary-blue);
+      accent-color: var(--kedah-green);
     }
 
     .alert-box {
@@ -258,13 +277,12 @@
 
 <div class="login-container">
   <div class="brand-side">
-    <div class="logo-badge">🍜</div>
-    <h1 class="brand-title">Bihun Sup<br>Selambak</h1>
-    <p class="brand-subtitle">Portal pengurusan staf rasmi untuk kawalan pesanan, dapur, dan pemantauan prestasi restoran.</p>
+    <h1 class="brand-title">Bihun Sup Daging Selambak</h1>
+    <p class="brand-subtitle">Staff Only</p>
     <div class="feature-tags">
-      <span class="tag">Order System</span>
-      <span class="tag">Kitchen KDS</span>
-      <span class="tag">Admin Analytics</span>
+      <span class="tag">Waiter</span>
+      <span class="tag">Kitchen Display</span>
+      <span class="tag">Cashier</span>
     </div>
   </div>
 
