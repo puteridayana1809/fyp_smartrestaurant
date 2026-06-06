@@ -12,7 +12,7 @@
     :root {
       --primary-yellow: #F5C518;
       --primary-dark: #1a1a2e;
-      --sidebar-bg: #fefefe;
+      --sidebar-bg: linear-gradient(180deg, #2d5016 0%, #3a6319 100%);
       --card-shadow: 0 4px 20px rgba(0,0,0,0.06);
       --accent-green: #22c55e;
       --accent-red: #ef4444;
@@ -36,7 +36,7 @@
       bottom: 0;
       width: 260px;
       background: var(--sidebar-bg);
-      border-right: 1px solid #eee;
+      border-right: 2px solid #4a7c23;
       padding: 20px;
       transition: transform 0.3s ease-in-out;
       z-index: 1000;
@@ -72,7 +72,7 @@
       margin: 0;
       font-size: 1rem;
       font-weight: 700;
-      color: #1a1a1a;
+      color: #ffffff;
       line-height: 1.2;
     }
 
@@ -110,7 +110,7 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      color: #555 !important;
+      color: rgba(255, 255, 255, 0.85) !important;
       text-decoration: none;
       padding: 12px 14px;
       border-radius: 10px;
@@ -127,8 +127,9 @@
     }
 
     .sidebar a.active {
-      background: linear-gradient(135deg, #1a1a2e 0%, #2d3561 100%);
+      background: rgba(245, 197, 24, 0.2);
       color: #fff !important;
+      border: 1px solid var(--primary-yellow);
     }
 
     .sidebar a.active i {
@@ -136,8 +137,8 @@
     }
 
     .sidebar a:hover:not(.active) {
-      background: #f5f5f5;
-      color: #1a1a1a !important;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff !important;
     }
 
     .sidebar .menu-toggle {
@@ -146,7 +147,7 @@
     }
 
     .sidebar .menu-toggle:hover {
-      background: #f5f5f5;
+      background: rgba(255, 255, 255, 0.1);
     }
 
     .sidebar .menu-toggle .arrow {
@@ -161,7 +162,7 @@
     .sidebar .submenu {
       margin-left: 20px;
       padding-left: 12px;
-      border-left: 2px solid #e0e0e0;
+      border-left: 2px solid rgba(255, 255, 255, 0.3);
     }
 
     .sidebar .submenu a {
@@ -170,7 +171,7 @@
     }
 
     .sidebar-footer {
-      border-top: 1px solid #eee;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
       padding-top: 16px;
       margin-top: auto;
     }
@@ -180,7 +181,7 @@
       align-items: center;
       gap: 12px;
       padding: 12px;
-      background: #f8f9fc;
+      background: rgba(255, 255, 255, 0.1);
       border-radius: 12px;
       margin-bottom: 12px;
     }
@@ -204,12 +205,12 @@
     .user-details .name {
       font-weight: 600;
       font-size: 0.9rem;
-      color: #1a1a1a;
+      color: #ffffff;
     }
 
     .user-details .role {
       font-size: 0.75rem;
-      color: #888;
+      color: rgba(255, 255, 255, 0.7);
     }
 
     /* When sidebar is closed */
@@ -615,6 +616,36 @@
     
     /* Table styling */
     .table thead th { background: #f8f9fc; }
+    
+    /* Action buttons styling */
+    .btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.875rem;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .btn-primary {
+      background-color: #3b82f6;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background-color: #2563eb;
+      transform: translateY(-1px);
+    }
+    
+    .btn-danger {
+      background-color: #ef4444;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background-color: #dc2626;
+      transform: translateY(-1px);
+    }
   </style>
 </head>
 <body>
@@ -652,14 +683,28 @@
         Menu Management
       </a>
     </div>
-    <a href="dashboard-admin/staffmanagement.html">
-      <i class="fas fa-users"></i>
-      <span>Staff Access</span>
-    </a>
-    <a href="dashboard-admin/groceriesmanagement.html">
-      <i class="fas fa-carrot"></i>
-      <span>Groceries</span>
-    </a>
+    
+    <div class="menu-toggle" id="staffToggle">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <i class="fas fa-users"></i>
+        <span>Staff Management</span>
+      </div>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="submenu" id="staffSubmenu">
+      <a href="dashboard-admin/staffmanagement.html">
+        <i class="fas fa-id-card"></i>
+        Staff Directory
+      </a>
+      <a href="dashboard-admin/staffattendance.html">
+        <i class="fas fa-clock"></i>
+        Attendance
+      </a>
+      <a href="dashboard-admin/staffpayroll.html">
+        <i class="fas fa-money-bill-wave"></i>
+        Payroll
+      </a>
+    </div>
   </nav>
 
   <div class="sidebar-footer">
@@ -670,7 +715,7 @@
         <div class="role">Admin</div>
       </div>
     </div>
-    <button id="logoutBtn" class="btn btn-outline-dark btn-sm w-100">
+    <button id="logoutBtn" class="btn btn-danger btn-sm w-100">
       <i class="fas fa-sign-out-alt me-2"></i>Logout
     </button>
   </div>
@@ -779,7 +824,9 @@
           <div class="chart-subtitle">Cash vs QR distribution</div>
         </div>
       </div>
-      <canvas id="paySplitChart" height="140"></canvas>
+      <div style="max-width: 300px; margin: 0 auto;">
+        <canvas id="paySplitChart" height="200"></canvas>
+      </div>
     </div>
     
     <div class="chart-card">
@@ -855,6 +902,7 @@
             <th class="text-end">Total (RM)</th>
             <th>Status</th>
             <th>Payment</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody id="ordersTbody"></tbody>
@@ -927,6 +975,21 @@ document.addEventListener('click', async (e) => {
         storeSubmenu.style.display = 'block';
       } else {
         storeSubmenu.style.display = 'none';
+      }
+    });
+  }
+
+  // Staff Management submenu toggle
+  const staffToggle = document.getElementById('staffToggle');
+  const staffSubmenu = document.getElementById('staffSubmenu');
+  
+  if (staffToggle && staffSubmenu) {
+    staffToggle.addEventListener('click', () => {
+      staffToggle.classList.toggle('collapsed');
+      if (staffSubmenu.style.display === 'none') {
+        staffSubmenu.style.display = 'block';
+      } else {
+        staffSubmenu.style.display = 'none';
       }
     });
   }
@@ -1071,7 +1134,7 @@ function updateActualCash() {
       datePicker.value = tzFix(now).toISOString().slice(0,10);
       updateGreeting();
       loadActiveTables();
-
+      
       // listeners
       let unsub = null;
       function listenForDate(isoDateStr){
@@ -1084,11 +1147,8 @@ function updateActualCash() {
         updateGreeting();
         loadActiveTables();
         loadPaymentSplits(start, end);
-
-// Trigger Menu Sales Data for selected day
-loadMenuSalesData(start, end);
-loadOpeningDrawer(isoDateStr);
-
+        loadOpeningDrawer(isoDateStr);
+        loadMenuSalesData(start, end);
 
         // live orders for the chosen date
         const qToday = query(
@@ -1111,7 +1171,7 @@ snap.forEach(docSnap => {
 
   let ts =o.createdAt?.toDate ? o.createdAt.toDate() : 
           o.updatedAt?.toDate ? o.updatedAt.toDate() :
-          new date();   
+          new Date();   
 
   const total = (o.items || []).reduce((s, it) => {
     const price = typeof it.unitPrice === 'number' ? it.unitPrice : parseFloat(it.unitPrice) || 0;
@@ -1131,6 +1191,7 @@ snap.forEach(docSnap => {
   const orderId = `#SH-${orderTime}${String(orderIndex).padStart(2,'0')}`;
 
   rows.push({
+    docId: docSnap.id,
     orderId,
     time: ts,
     table: tableLabel,
@@ -1141,7 +1202,7 @@ snap.forEach(docSnap => {
   });
 
 
-  // Only add to sales if completed today
+  // Only add to sales if completed
 if (o.status === "completed") {
   const cAt = o.completedAt?.toDate?.() ? o.completedAt.toDate() : null;
   completedCount++;
@@ -1188,6 +1249,14 @@ updateActualCash(); // ✅ automatically update Actual Cash
                 <span class="pill ${r.status==='completed'?'completed': r.status==='new'?'new':'preparing'}">${r.status}</span>
               </td>
               <td>${r.payment}</td>
+              <td>
+                <button class="btn btn-sm btn-primary me-1" onclick="editOrder('${r.docId}', '${r.orderId}')">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="deleteOrder('${r.docId}', '${r.orderId}')">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </td>
             </tr>
           `).join("");
 
@@ -1324,9 +1393,18 @@ async function loadOpeningDrawer(dateStr) {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1,
       plugins: {
         legend: {
-          position: 'bottom'
+          position: 'bottom',
+          labels: {
+            boxWidth: 12,
+            padding: 10,
+            font: {
+              size: 11
+            }
+          }
         }
       }
     }
@@ -1525,6 +1603,26 @@ async function loadPaymentSplits(start, end) {
       // start
       listenForDate(datePicker.value);
     }
+
+    // ===== ORDER ACTIONS =====
+    window.editOrder = function(docId, orderId) {
+      alert(`Edit order ${orderId} - Feature coming soon!`);
+      // TODO: Implement edit functionality
+    };
+
+    window.deleteOrder = async function(docId, orderId) {
+      if (!confirm(`Are you sure you want to delete order ${orderId}?`)) {
+        return;
+      }
+      
+      try {
+        await deleteDoc(rdoc("orders", docId));
+        alert('✅ Order deleted successfully!');
+      } catch (error) {
+        console.error('Error deleting order:', error);
+        alert('Error deleting order: ' + error.message);
+      }
+    };
 
   }); // ✅ only close DOMContentLoaded once
 </script>

@@ -197,7 +197,7 @@ function inferSection(item) {
 
   const drinkKW = [
     "teh","milo","kopi","nescafe","neslo","sirap","limau","joss","extra joss",
-    "air panas","air suam","air kosong","bandung","horlicks","coklat","chocolate",
+    "air","air panas","air suam","air kosong","bandung","horlicks","coklat","chocolate",
     "3 layer","mocha","drink","ais","o ais","bersusu","lemon","tapai"
   ];
 
@@ -674,7 +674,7 @@ const logoutBtn = document.getElementById('logoutBtn');
 logoutBtn.addEventListener('click', async () => {
   try {
     await signOut(auth);
-    window.location.href = "login.html"; // redirect after logout
+    window.location.href = "index.html"; // redirect to login page
   } catch (err) {
     console.error("Logout failed:", err);
     alert("Failed to log out: " + err.message);

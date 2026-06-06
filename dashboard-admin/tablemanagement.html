@@ -10,7 +10,7 @@
     :root {
       --primary-yellow: #F5C518;
       --primary-dark: #1a1a2e;
-      --sidebar-bg: #fefefe;
+      --sidebar-bg: linear-gradient(180deg, #2d5016 0%, #3a6319 100%);
       --card-shadow: 0 4px 20px rgba(0,0,0,0.06);
       --accent-green: #22c55e;
       --accent-red: #ef4444;
@@ -33,7 +33,7 @@
       bottom: 0;
       width: 260px;
       background: var(--sidebar-bg);
-      border-right: 1px solid #eee;
+      border-right: 2px solid #4a7c23;
       padding: 20px;
       transition: transform 0.3s ease-in-out;
       z-index: 1000;
@@ -69,7 +69,7 @@
       margin: 0;
       font-size: 1rem;
       font-weight: 700;
-      color: #1a1a1a;
+      color: #ffffff;
       line-height: 1.2;
     }
 
@@ -107,7 +107,7 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      color: #555 !important;
+      color: rgba(255, 255, 255, 0.85) !important;
       text-decoration: none;
       padding: 12px 14px;
       border-radius: 10px;
@@ -124,8 +124,9 @@
     }
 
     .sidebar a.active {
-      background: linear-gradient(135deg, #1a1a2e 0%, #2d3561 100%);
+      background: rgba(245, 197, 24, 0.2);
       color: #fff !important;
+      border: 1px solid var(--primary-yellow);
     }
 
     .sidebar a.active i {
@@ -133,8 +134,8 @@
     }
 
     .sidebar a:hover:not(.active) {
-      background: #f5f5f5;
-      color: #1a1a1a !important;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff !important;
     }
 
     .sidebar .menu-toggle {
@@ -143,7 +144,7 @@
     }
 
     .sidebar .menu-toggle:hover {
-      background: #f5f5f5;
+      background: rgba(255, 255, 255, 0.1);
     }
 
     .sidebar .menu-toggle .arrow {
@@ -158,7 +159,7 @@
     .sidebar .submenu {
       margin-left: 20px;
       padding-left: 12px;
-      border-left: 2px solid #e0e0e0;
+      border-left: 2px solid rgba(255, 255, 255, 0.3);
     }
 
     .sidebar .submenu a {
@@ -167,7 +168,7 @@
     }
 
     .sidebar-footer {
-      border-top: 1px solid #eee;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
       padding-top: 16px;
       margin-top: auto;
     }
@@ -177,7 +178,7 @@
       align-items: center;
       gap: 12px;
       padding: 12px;
-      background: #f8f9fc;
+      background: rgba(255, 255, 255, 0.1);
       border-radius: 12px;
       margin-bottom: 12px;
     }
@@ -201,12 +202,12 @@
     .user-details .name {
       font-weight: 600;
       font-size: 0.9rem;
-      color: #1a1a1a;
+      color: #ffffff;
     }
 
     .user-details .role {
       font-size: 0.75rem;
-      color: #888;
+      color: rgba(255, 255, 255, 0.7);
     }
 
     .sidebar.closed {
@@ -383,14 +384,28 @@
         Menu Management
       </a>
     </div>
-    <a href="staffmanagement.html">
-      <i class="fas fa-users"></i>
-      <span>Staff Access</span>
-    </a>
-    <a href="groceriesmanagement.html">
-      <i class="fas fa-carrot"></i>
-      <span>Groceries</span>
-    </a>
+    
+    <div class="menu-toggle" id="staffToggle">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <i class="fas fa-users"></i>
+        <span>Staff Management</span>
+      </div>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="submenu" id="staffSubmenu" style="display:none">
+      <a href="staffmanagement.html">
+        <i class="fas fa-id-card"></i>
+        Staff Directory
+      </a>
+      <a href="staffattendance.html">
+        <i class="fas fa-clock"></i>
+        Attendance
+      </a>
+      <a href="staffpayroll.html">
+        <i class="fas fa-money-bill-wave"></i>
+        Payroll
+      </a>
+    </div>
   </nav>
 
   <div class="sidebar-footer">
@@ -401,7 +416,7 @@
         <div class="role">Admin</div>
       </div>
     </div>
-    <button id="logoutBtn" class="btn btn-outline-dark btn-sm w-100">
+    <button id="logoutBtn" class="btn btn-danger btn-sm w-100">
       <i class="fas fa-sign-out-alt me-2"></i>Logout
     </button>
   </div>
@@ -512,6 +527,14 @@
   storeToggle?.addEventListener('click', () => {
     storeToggle.classList.toggle('collapsed');
     storeSubmenu.style.display = storeSubmenu.style.display === 'none' ? 'block' : 'none';
+  });
+
+  // Staff submenu toggle
+  const staffToggle = document.getElementById('staffToggle');
+  const staffSubmenu = document.getElementById('staffSubmenu');
+  staffToggle?.addEventListener('click', () => {
+    staffToggle.classList.toggle('collapsed');
+    staffSubmenu.style.display = staffSubmenu.style.display === 'none' ? 'block' : 'none';
   });
 
   // Auth

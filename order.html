@@ -196,7 +196,65 @@ btn.onclick = () => {
     const menuContainer = document.getElementById("menuContainer");
     if (!menuContainer) return console.error("❌ #menuContainer not found in DOM");
 
+    const categoryFiltersDiv = document.getElementById("categoryFilters");
+    let currentCategoryFilter = 'sup'; // Default to sup
+    let allCategories = [];
+    let allMenuItems = [];
+
     function formatRM(v){ return v==null ? "-" : "RM " + Number(v).toFixed(2); }
+
+    // Render category filter buttons - show ALL categories from database
+    function renderCategoryFilters(categories) {
+      if (!categories || categories.length === 0) return;
+      
+      console.log("🔍 All categories from Firebase:", categories);
+      
+      const categoryIcons = {
+        'minuman': 'fa-glass-water',
+        'goreng': 'fa-fire-burner',
+        'sup': 'fa-bowl-food'
+      };
+
+      const categoryNames = {
+        'minuman': 'Minuman',
+        'goreng': 'Goreng',
+        'sup': 'Sup'
+      };
+
+      // Always show these 3 buttons in order
+      const orderedCats = ['sup', 'goreng', 'minuman'];
+      let html = '';
+
+      orderedCats.forEach(catId => {
+        const icon = categoryIcons[catId] || 'fa-utensils';
+        const name = categoryNames[catId] || catId;
+        
+        html += `<button class="cat-filter-btn ${currentCategoryFilter === catId ? 'active' : ''}" data-category="${catId}">
+          <i class="fas ${icon}"></i> ${name}
+        </button>`;
+      });
+
+      categoryFiltersDiv.innerHTML = html;
+
+      // Add click handlers
+      categoryFiltersDiv.querySelectorAll('.cat-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentCategoryFilter = btn.dataset.category;
+          categoryFiltersDiv.querySelectorAll('.cat-filter-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          renderFilteredMenu();
+        });
+      });
+    }
+
+    // Render filtered menu based on selected category
+    function renderFilteredMenu() {
+      if (!allCategories.length || !currentCategoryFilter) return;
+      
+      const filteredCategories = allCategories.filter(c => c.categoryId === currentCategoryFilter);
+      const filteredItems = allMenuItems.filter(it => it.categoryId === currentCategoryFilter);
+      renderMenuByCategory(filteredCategories, filteredItems);
+    }
 
     function renderMenuByCategory(categories, items) {
       console.log("📊 rendering | cats:", categories.length, "items:", items.length);
@@ -216,10 +274,11 @@ btn.onclick = () => {
           const section = document.createElement("div");
           section.className = "accordion-item";
           section.id = accId;
+          // Auto-expand accordion when showing specific category
           section.innerHTML = `
             <div>
-              <button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#${bodyId}">${title}</button>
-              <div id="${bodyId}" class="accordion-collapse collapse">
+              <button class="accordion-button" data-bs-toggle="collapse" data-bs-target="#${bodyId}">${title}</button>
+              <div id="${bodyId}" class="accordion-collapse collapse show">
                 <div class="accordion-body">
                   <div class="menu-grid"></div>
                 </div>
@@ -269,6 +328,35 @@ btn.onclick = () => {
         });
     }
 
+    // Initialize default categories if they don't exist (doesn't delete existing ones!)
+    async function initializeDefaultCategories() {
+      try {
+        const defaultCategories = [
+          { id: 'sup', name: 'Sup', sort: 1 },
+          { id: 'goreng', name: 'Goreng', sort: 2 },
+          { id: 'minuman', name: 'Minuman', sort: 3 }
+        ];
+
+        for (const cat of defaultCategories) {
+          const catDocRef = doc(db, `restaurants/${restaurantId}/categories`, cat.id);
+          const catDoc = await getDoc(catDocRef);
+
+          if (!catDoc.exists()) {
+            await setDoc(catDocRef, {
+              name: cat.name,
+              sort: cat.sort,
+              createdAt: serverTimestamp()
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing categories:', error);
+      }
+    }
+
+    // Initialize categories (non-blocking)
+    initializeDefaultCategories();
+
     let currentCats = [];
     let currentItems = [];
 
@@ -278,9 +366,13 @@ btn.onclick = () => {
     onSnapshot(
       catsQ,
       snap => {
-        currentCats = snap.docs.map(d=>({id:d.id, ...d.data()}));
-        console.log("📥 categories docs:", snap.size);
-        renderMenuByCategory(currentCats, currentItems);
+        currentCats = snap.docs.map(d=>({categoryId: d.id, ...d.data()}));
+        allCategories = currentCats;
+        console.log("📥 categories found:", snap.size, currentCats);
+        if (allCategories.length > 0) {
+          renderCategoryFilters(allCategories);
+          renderFilteredMenu();
+        }
       },
       err => {
         console.error("❌ categories onSnapshot error:", err);
@@ -292,8 +384,9 @@ btn.onclick = () => {
       itemsQ,
       snap => {
         currentItems = snap.docs.map(d=>({id:d.id, ...d.data()}));
+        allMenuItems = currentItems;
         console.log("📥 menuItems docs:", snap.size);
-        renderMenuByCategory(currentCats, currentItems);
+        renderFilteredMenu();
       },
       err => {
         console.error("❌ menuItems onSnapshot error:", err);
@@ -478,6 +571,41 @@ btn.onclick = () => {
       font-size: 1.3rem;
       font-weight: 700;
       text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .category-filters {
+      display: flex;
+      gap: 8px;
+      padding: 1rem 1.5rem;
+      background: white;
+      border-bottom: 2px solid #f0f0f0;
+      flex-wrap: wrap;
+    }
+
+    .category-filters button {
+      padding: 8px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      background: white;
+      color: var(--kedah-green);
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .category-filters button:hover {
+      border-color: var(--kedah-green);
+      background: #f8faf7;
+    }
+
+    .category-filters button.active {
+      background: var(--kedah-green);
+      color: white;
+      border-color: var(--kedah-green);
     }
     
     #selectedTable {
@@ -963,6 +1091,10 @@ btn.onclick = () => {
       <!-- MENU -->
       <div class="menu-section">
         <div class="menu-header">Menu</div>
+        <!-- Category Filter Buttons -->
+        <div class="category-filters" id="categoryFilters">
+          <!-- Rendered by JS -->
+        </div>
         <div class="menu-content">
           <div id="menuContainer"></div>
         </div>

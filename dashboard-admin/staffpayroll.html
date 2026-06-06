@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Staff Payroll — Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-yellow: #F5C518;
+      --kedah-green: #2d5016;
+      --kedah-light: #4a7c23;
+      --card-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    * { box-sizing: border-box; }
+    body { background:#f7f9fc; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; margin:0; padding:0; }
+    
+    /* SIDEBAR */
+    .sidebar { position:fixed; left:0; top:0; bottom:0; width:260px; background:linear-gradient(180deg, #2d5016 0%, #3a6319 100%); color:#fff; padding:20px; transition:transform 0.3s ease-in-out; z-index:1000; border-right: 2px solid #4a7c23; display:flex; flex-direction:column; overflow-y:auto; }
+    .sidebar.closed { transform:translateX(-100%); }
+    .sidebar-handle { position:fixed; top:50%; left:260px; transform:translateY(-50%); background:#2d5016; color:#fff; border:none; padding:6px 10px; border-radius:0 6px 6px 0; cursor:pointer; transition:left 0.3s ease-in-out; z-index:1100; }
+    .sidebar.closed + .sidebar-handle { left:0; }
+    .sidebar-brand { display:flex; align-items:center; gap:12px; padding:16px 12px; margin-bottom:24px; }
+    .brand-logo { width:56px; height:56px; background:linear-gradient(135deg, #2d5016 0%, #4a7c23 100%); border-radius:50%; display:flex; align-items:center; justify-content:center; border:3px solid var(--primary-yellow); flex-shrink:0; }
+    .brand-logo i { color:var(--primary-yellow); font-size:24px; }
+    .brand-text h4 { margin:0; font-size:1rem; font-weight:700; color:#ffffff; line-height:1.2; }
+    .brand-text .brand-tag { display:inline-block; background:var(--primary-yellow); color:#000; font-size:0.65rem; font-weight:700; padding:2px 8px; border-radius:20px; margin-top:4px; }
+    .sidebar-nav { flex:1; }
+    .sidebar a, .sidebar .menu-toggle { display:flex; align-items:center; gap:12px; color:rgba(255, 255, 255, 0.85) !important; text-decoration:none; padding:12px 14px; border-radius:10px; margin-bottom:4px; font-weight:500; font-size:0.95rem; transition:all 0.2s ease; }
+    .sidebar a i, .sidebar .menu-toggle i { width:20px; text-align:center; font-size:1rem; }
+    .sidebar a.active { background:rgba(245, 197, 24, 0.2); color:#fff !important; border:1px solid var(--primary-yellow); }
+    .sidebar a.active i { color:var(--primary-yellow); }
+    .sidebar a:hover:not(.active) { background:rgba(255, 255, 255, 0.1); color:#fff !important; }
+    .sidebar .menu-toggle { cursor:pointer; justify-content:space-between; }
+    .sidebar .menu-toggle:hover { background:rgba(255, 255, 255, 0.1); }
+    .sidebar .menu-toggle .arrow { transition:transform 0.3s ease; font-size:0.7rem; }
+    .sidebar .menu-toggle.collapsed .arrow { transform:rotate(-90deg); }
+    .sidebar .submenu { margin-left:20px; padding-left:12px; border-left:2px solid rgba(255, 255, 255, 0.3); }
+    .sidebar .submenu a { font-size:0.9rem; padding:10px 14px; }
+    .sidebar-footer { border-top:1px solid rgba(255, 255, 255, 0.2); padding-top:16px; margin-top:auto; }
+    .user-info { display:flex; align-items:center; gap:12px; padding:12px; background:rgba(255, 255, 255, 0.1); border-radius:12px; margin-bottom:12px; }
+    .user-avatar { width:42px; height:42px; background:var(--primary-yellow); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#1a1a1a; }
+    .user-details { flex:1; }
+    .user-details .name { font-weight:600; font-size:0.9rem; color:#ffffff; }
+    .user-details .role { font-size:0.75rem; color:rgba(255, 255, 255, 0.7); }
+    
+    /* CONTENT */
+    .content { margin-left:260px; padding:24px 32px; transition:margin-left 0.3s ease-in-out; min-height:100vh; }
+    .content.full { margin-left:0; }
+    
+    /* PAGE HEADER */
+    .page-header { margin-bottom:28px; }
+    .page-header h2 { margin:0; font-size:1.6rem; font-weight:600; color:#1a1a1a; }
+    .page-header p { color:#64748b; margin:4px 0 0; }
+    
+    /* CARDS */
+    .section-card { background:white; border-radius:16px; box-shadow:var(--card-shadow); overflow:hidden; margin-bottom:24px; }
+    .section-header { background:linear-gradient(135deg, var(--kedah-green), var(--kedah-light)); color:white; padding:1rem 1.25rem; font-size:1rem; font-weight:700; display:flex; align-items:center; gap:10px; justify-content:space-between; }
+    .section-header i { color:var(--primary-yellow); }
+    .section-body { padding:1.5rem; }
+    
+    /* SUMMARY CARDS */
+    .summary-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:20px; margin-bottom:24px; }
+    .summary-card { background:white; border-radius:16px; padding:24px; box-shadow:var(--card-shadow); position:relative; overflow:hidden; }
+    .summary-card::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; background:var(--kedah-green); }
+    .summary-card.yellow::before { background:var(--primary-yellow); }
+    .summary-card.blue::before { background:#3b82f6; }
+    .summary-card.purple::before { background:#8b5cf6; }
+    .summary-icon { width:50px; height:50px; border-radius:12px; display:flex; align-items:center; justify-content:center; margin-bottom:16px; font-size:1.4rem; }
+    .summary-card .summary-icon { background:rgba(45, 80, 22, 0.1); color:var(--kedah-green); }
+    .summary-card.yellow .summary-icon { background:rgba(245, 197, 24, 0.2); color:#b8860b; }
+    .summary-card.blue .summary-icon { background:rgba(59, 130, 246, 0.1); color:#3b82f6; }
+    .summary-card.purple .summary-icon { background:rgba(139, 92, 246, 0.1); color:#8b5cf6; }
+    .summary-value { font-size:1.8rem; font-weight:700; color:#1a1a1a; margin-bottom:4px; }
+    .summary-label { font-size:0.85rem; color:#64748b; }
+    
+    /* PAYROLL TABLE */
+    .payroll-table { width:100%; border-collapse:collapse; }
+    .payroll-table th { background:#f8faf7; color:var(--kedah-green); font-weight:600; padding:14px 16px; text-align:left; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.5px; }
+    .payroll-table td { padding:16px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+    .payroll-table tr:hover { background:#f8faf7; }
+    .payroll-table .salary { font-size:1.1rem; font-weight:700; color:var(--kedah-green); }
+    
+    /* STAFF AVATAR */
+    .staff-avatar { width:42px; height:42px; border-radius:50%; background:#e5e7eb; display:flex; align-items:center; justify-content:center; color:#64748b; font-weight:600; font-size:0.95rem; }
+    .staff-avatar img { width:100%; height:100%; border-radius:50%; object-fit:cover; }
+    
+    /* PERIOD SELECTOR */
+    .period-selector { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:24px; align-items:center; }
+    .period-selector label { font-weight:600; color:#374151; }
+    .period-selector .form-control, .period-selector .form-select { 
+      border:2px solid #e5e7eb; border-radius:10px; padding:10px 14px; max-width:200px; 
+    }
+    .period-selector .form-control:focus, .period-selector .form-select:focus { 
+      border-color:var(--kedah-green); box-shadow:0 0 0 3px rgba(45, 80, 22, 0.1); 
+    }
+    
+    /* BUTTONS */
+    .btn-kedah { background:linear-gradient(135deg, var(--kedah-green), var(--kedah-light)); color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:600; transition:all 0.3s; }
+    .btn-kedah:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(45, 80, 22, 0.3); color:white; }
+    .btn-outline-kedah { border:2px solid var(--kedah-green); color:var(--kedah-green); background:transparent; padding:8px 16px; border-radius:8px; font-weight:600; transition:all 0.2s; }
+    .btn-outline-kedah:hover { background:var(--kedah-green); color:white; }
+    
+    /* PAYROLL DETAIL CARD */
+    .payroll-detail { background:linear-gradient(135deg, var(--kedah-green), var(--kedah-light)); color:white; border-radius:12px; padding:20px; margin-top:12px; }
+    .payroll-detail-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.2); }
+    .payroll-detail-row:last-child { border-bottom:none; font-size:1.2rem; font-weight:700; padding-top:12px; }
+    .payroll-detail-label { opacity:0.9; }
+    
+    /* BANK INFO */
+    .bank-info { background:#f8faf7; border-radius:8px; padding:10px 14px; font-size:0.85rem; }
+    .bank-info strong { color:var(--kedah-green); }
+    
+    /* PRINT BUTTON */
+    @media print {
+      .sidebar, .sidebar-handle, .period-selector, .btn-kedah, .no-print { display:none !important; }
+      .content { margin-left:0 !important; padding:0 !important; }
+      .section-card { box-shadow:none !important; break-inside:avoid; }
+    }
+    
+    /* RESPONSIVE */
+    @media (max-width:1024px) {
+      .content { margin-left:0; padding:16px; }
+      .sidebar { transform:translateX(-100%); }
+      .sidebar.open { transform:translateX(0); }
+      .sidebar-handle { left:0; }
+      .sidebar.open + .sidebar-handle { left:260px; }
+    }
+    @media (max-width:768px) {
+      .summary-grid { grid-template-columns:1fr 1fr; }
+      .payroll-table { display:block; overflow-x:auto; }
+      .period-selector .form-control, .period-selector .form-select { max-width:100%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">
+      <i class="fas fa-utensils"></i>
+    </div>
+    <div class="brand-text">
+      <h4>BIHUN SUP<br>DAGING<br>SELAMBAK</h4>
+      <span class="brand-tag">VIRAL AYER HITAM</span>
+    </div>
+  </div>
+  
+  <nav class="sidebar-nav">
+    <a href="../admin.html">
+      <i class="fas fa-chart-pie"></i>
+      <span>Overview</span>
+    </a>
+    
+    <div class="menu-toggle" id="storeToggle">
+      <div class="d-flex align-items-center gap-2">
+        <i class="fas fa-store"></i>
+        <span>Store Management</span>
+      </div>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="submenu" id="storeSubmenu">
+      <a href="tablemanagement.html">
+        <i class="fas fa-chair"></i>
+        <span>Table Management</span>
+      </a>
+      <a href="menumanager.html">
+        <i class="fas fa-book"></i>
+        <span>Menu Management</span>
+      </a>
+    </div>
+    
+    <div class="menu-toggle" id="staffToggle">
+      <div class="d-flex align-items-center gap-2">
+        <i class="fas fa-users"></i>
+        <span>Staff Management</span>
+      </div>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="submenu" id="staffSubmenu">
+      <a href="staffmanagement.html">
+        <i class="fas fa-id-card"></i>
+        <span>Staff Directory</span>
+      </a>
+      <a href="staffattendance.html">
+        <i class="fas fa-clock"></i>
+        <span>Attendance</span>
+      </a>
+      <a href="staffpayroll.html" class="active">
+        <i class="fas fa-money-bill-wave"></i>
+        <span>Payroll</span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="user-avatar">A</div>
+      <div class="user-details">
+        <div class="name" id="whoami">Loading...</div>
+        <div class="role">Admin</div>
+      </div>
+    </div>
+    <button id="logoutBtn" class="btn btn-danger btn-sm w-100">
+      <i class="fas fa-sign-out-alt me-2"></i>Logout
+    </button>
+  </div>
+</div>
+
+<button id="sidebarHandle" class="sidebar-handle">&lt;</button>
+
+<!-- MAIN CONTENT -->
+<div class="content" id="content">
+  <div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+      <h2><i class="fas fa-money-bill-wave me-2" style="color:var(--kedah-green)"></i>Staff Payroll</h2>
+      <p>Calculate salaries based on attendance hours and pay rates</p>
+    </div>
+    <button class="btn btn-kedah no-print" onclick="window.print()">
+      <i class="fas fa-print me-2"></i>Print Report
+    </button>
+  </div>
+
+  <!-- PERIOD SELECTOR -->
+  <div class="period-selector no-print">
+    <label>Pay Period:</label>
+    <input type="date" class="form-control" id="startDate">
+    <span class="text-muted">to</span>
+    <input type="date" class="form-control" id="endDate">
+    <button class="btn btn-kedah" id="calculateBtn">
+      <i class="fas fa-calculator me-2"></i><span id="calcBtnText">Calculate Payroll</span>
+    </button>
+  </div>
+
+  <!-- SUMMARY CARDS -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-icon"><i class="fas fa-users"></i></div>
+      <div class="summary-value" id="totalStaff">0</div>
+      <div class="summary-label">Total Staff</div>
+    </div>
+    <div class="summary-card yellow">
+      <div class="summary-icon"><i class="fas fa-clock"></i></div>
+      <div class="summary-value" id="totalHours">0</div>
+      <div class="summary-label">Total Hours Worked</div>
+    </div>
+    <div class="summary-card blue">
+      <div class="summary-icon"><i class="fas fa-wallet"></i></div>
+      <div class="summary-value" id="totalPayroll">RM 0</div>
+      <div class="summary-label">Total Payroll</div>
+    </div>
+    <div class="summary-card purple">
+      <div class="summary-icon"><i class="fas fa-chart-line"></i></div>
+      <div class="summary-value" id="avgSalary">RM 0</div>
+      <div class="summary-label">Average Salary</div>
+    </div>
+  </div>
+
+  <!-- PAYROLL TABLE -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="d-flex align-items-center gap-2">
+        <i class="fas fa-file-invoice-dollar"></i>
+        <span>Payroll Details</span>
+      </div>
+      <small id="periodLabel" style="opacity:0.8"></small>
+    </div>
+    <div class="section-body p-0">
+      <table class="payroll-table">
+        <thead>
+          <tr>
+            <th>Staff</th>
+            <th>Position</th>
+            <th>Hours Worked</th>
+            <th>Pay Rate</th>
+            <th>Gross Salary</th>
+            <th>Bank Details</th>
+          </tr>
+        </thead>
+        <tbody id="payrollBody">
+          <tr>
+            <td colspan="6" class="text-center py-4 text-muted">
+              Select a pay period and click "Calculate Payroll"
+            </td>
+          </tr>
+        </tbody>
+        <tfoot id="payrollFoot" style="display:none">
+          <tr style="background:#f8faf7;font-weight:700">
+            <td colspan="2">TOTAL</td>
+            <td id="footHours">0 hrs</td>
+            <td>-</td>
+            <td id="footSalary" class="salary">RM 0.00</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- INDIVIDUAL BREAKDOWNS -->
+  <div id="breakdownSection" style="display:none">
+    <h5 class="mb-3"><i class="fas fa-chart-bar me-2" style="color:var(--kedah-green)"></i>Individual Breakdown</h5>
+    <div class="row g-3" id="breakdownCards"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { firebaseConfig, RESTAURANT_ID } from "../js/firebase-config.esm.js";
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const rtdb = getDatabase(app);
+  const auth = getAuth(app);
+
+  const bankNames = {
+    maybank: 'Maybank',
+    cimb: 'CIMB Bank',
+    rhb: 'RHB Bank',
+    publicbank: 'Public Bank',
+    hongLeong: 'Hong Leong Bank',
+    ambank: 'AmBank',
+    bankislam: 'Bank Islam',
+    bsn: 'BSN'
+  };
+
+  let staffList = [];
+  let attendanceData = {};
+
+  // Auth check
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = "../index.html";
+      return;
+    }
+    document.getElementById('whoami').textContent = user.email;
+    await loadStaff();
+    await loadAttendance();
+    setDefaultDates();
+  });
+
+  // Logout
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await signOut(auth);
+    window.location.href = "../index.html";
+  });
+
+  // Sidebar toggles
+  document.getElementById('sidebarHandle').addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('closed');
+    document.getElementById('content').classList.toggle('full');
+  });
+
+  document.getElementById('storeToggle').addEventListener('click', function() {
+    this.classList.toggle('collapsed');
+    document.getElementById('storeSubmenu').style.display = this.classList.contains('collapsed') ? 'none' : 'block';
+  });
+
+  document.getElementById('staffToggle').addEventListener('click', function() {
+    this.classList.toggle('collapsed');
+    document.getElementById('staffSubmenu').style.display = this.classList.contains('collapsed') ? 'none' : 'block';
+  });
+
+  // Set default dates (current month)
+  function setDefaultDates() {
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    
+    document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
+    document.getElementById('endDate').value = lastDay.toISOString().split('T')[0];
+  }
+
+  // Load staff from Firestore
+  async function loadStaff() {
+    try {
+      const staffCol = collection(db, `restaurants/${RESTAURANT_ID}/staff`);
+      const snap = await getDocs(query(staffCol, orderBy('name')));
+      
+      staffList = [];
+      snap.forEach(doc => {
+        staffList.push({ id: doc.id, ...doc.data() });
+      });
+    } catch (err) {
+      console.error('Error loading staff:', err);
+    }
+  }
+
+  // Load attendance from RTDB
+  async function loadAttendance() {
+    try {
+      const attendanceRef = ref(rtdb, 'attendance');
+      const snapshot = await get(attendanceRef);
+      if (snapshot.exists()) {
+        attendanceData = snapshot.val();
+      }
+    } catch (err) {
+      console.error('Error loading attendance:', err);
+    }
+  }
+
+  // Get staff by RFID
+  function getStaffByRfid(uid) {
+    return staffList.find(s => s.rfidUid?.toUpperCase() === uid?.toUpperCase());
+  }
+
+  // Calculate payroll
+  document.getElementById('calculateBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('calculateBtn');
+    const btnText = document.getElementById('calcBtnText');
+    const originalText = btnText.textContent;
+    
+    // Disable button and show loading
+    btn.disabled = true;
+    btnText.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading latest data...';
+    
+    try {
+      // 🔄 Reload attendance data first to get latest changes
+      console.log('🔄 Reloading attendance data...');
+      await loadAttendance();
+      calculatePayroll();
+    } catch (error) {
+      console.error('Error calculating payroll:', error);
+      alert('Error loading data: ' + error.message);
+    } finally {
+      // Re-enable button
+      btn.disabled = false;
+      btnText.textContent = originalText;
+    }
+  });
+
+  function calculatePayroll() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+
+    if (!startDate || !endDate) {
+      alert('Please select start and end dates');
+      return;
+    }
+
+    console.log('📊 Calculating payroll for:', { startDate, endDate });
+    console.log('📋 Attendance data:', attendanceData);
+
+    // Update period label
+    const startFormatted = new Date(startDate).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+    const endFormatted = new Date(endDate).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+    document.getElementById('periodLabel').textContent = `${startFormatted} — ${endFormatted}`;
+
+    // Calculate hours for each staff
+    const payrollData = {};
+
+    // Initialize all staff with 0 hours
+    staffList.forEach(staff => {
+      if (staff.status === 'active' && staff.rfidUid) {
+        payrollData[staff.rfidUid.toUpperCase()] = {
+          staff,
+          hours: 0,
+          records: []
+        };
+      }
+    });
+
+    // Process attendance data
+    Object.entries(attendanceData).forEach(([rfidUid, data]) => {
+      const uid = rfidUid.toUpperCase();
+      
+      // Initialize if not exists
+      if (!payrollData[uid]) {
+        const staff = getStaffByRfid(uid);
+        if (staff) {
+          payrollData[uid] = { staff, hours: 0, records: [] };
+        } else {
+          return; // Skip unknown RFID
+        }
+      }
+
+      // Process records - NEW STRUCTURE: attendance/{rfidUid}/{date}/
+      Object.entries(data).forEach(([dateKey, rec]) => {
+        console.log(`  📅 Processing ${uid} on ${dateKey}:`, rec);
+        
+        // Skip if not an object with clock_in
+        if (typeof rec !== 'object' || !rec.clock_in) return;
+        
+        // Check if date is in range
+        if (dateKey >= startDate && dateKey <= endDate) {
+          const clockIn = rec.clock_in;  // e.g., "15:12:01"
+          const clockOut = rec.clock_out; // e.g., "15:14:33" or null
+          
+          if (clockIn && clockOut) {
+            // Build full datetime strings
+            const inDateTime = new Date(`${dateKey}T${clockIn}`);
+            const outDateTime = new Date(`${dateKey}T${clockOut}`);
+            
+            const hours = (outDateTime - inDateTime) / (1000 * 60 * 60);
+            
+            if (hours > 0 && hours < 24) {
+              console.log(`    ✅ Valid: ${hours.toFixed(2)} hrs`);
+              payrollData[uid].hours += hours;
+              payrollData[uid].records.push({
+                date: dateKey,
+                clockIn: `${dateKey} ${clockIn}`,
+                clockOut: `${dateKey} ${clockOut}`,
+                hours
+              });
+            } else {
+              console.log(`    ⚠️ Invalid hours: ${hours}`);
+            }
+          } else {
+            console.log(`    ⏳ Still working (no clock_out)`);
+          }
+        }
+      });
+    });
+
+    // Calculate salaries
+    const payrollResults = Object.values(payrollData).map(p => {
+      const salary = p.hours * (p.staff.payRate || 0);
+      console.log(`💰 ${p.staff.name}: ${p.hours.toFixed(2)} hrs × RM${p.staff.payRate || 0}/hr = RM${salary.toFixed(2)}`);
+      return {
+        ...p,
+        salary
+      };
+    }).filter(p => p.staff); // Remove any without staff info
+
+    // Sort by name
+    payrollResults.sort((a, b) => (a.staff.name || '').localeCompare(b.staff.name || ''));
+
+    console.log('📊 Final payroll results:', payrollResults);
+
+    // Render results
+    renderPayrollTable(payrollResults);
+    renderSummary(payrollResults);
+    renderBreakdowns(payrollResults);
+  }
+
+  function renderPayrollTable(results) {
+    const tbody = document.getElementById('payrollBody');
+    const tfoot = document.getElementById('payrollFoot');
+
+    if (results.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No payroll data for selected period</td></tr>';
+      tfoot.style.display = 'none';
+      return;
+    }
+
+    let totalHours = 0;
+    let totalSalary = 0;
+
+    tbody.innerHTML = results.map(r => {
+      totalHours += r.hours;
+      totalSalary += r.salary;
+
+      return `
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-3">
+              <div class="staff-avatar">
+                ${r.staff.photoUrl ? `<img src="${r.staff.photoUrl}" alt="${r.staff.name}">` : r.staff.name?.charAt(0) || '?'}
+              </div>
+              <div>
+                <div class="fw-semibold">${r.staff.name || 'Unknown'}</div>
+                <small class="text-muted">${r.staff.rfidUid || '-'}</small>
+              </div>
+            </div>
+          </td>
+          <td><span class="text-capitalize">${r.staff.position || '-'}</span></td>
+          <td><strong>${r.hours.toFixed(2)}</strong> hrs</td>
+          <td>RM ${parseFloat(r.staff.payRate || 0).toFixed(2)}/hr</td>
+          <td class="salary">RM ${r.salary.toFixed(2)}</td>
+          <td>
+            ${r.staff.bank ? `
+              <div class="bank-info">
+                <strong>${bankNames[r.staff.bank] || r.staff.bank}</strong><br>
+                ${r.staff.bankAccount || '-'}
+              </div>
+            ` : '<span class="text-muted">No bank info</span>'}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    document.getElementById('footHours').textContent = `${totalHours.toFixed(2)} hrs`;
+    document.getElementById('footSalary').textContent = `RM ${totalSalary.toFixed(2)}`;
+    tfoot.style.display = '';
+  }
+
+  function renderSummary(results) {
+    const totalStaff = results.filter(r => r.hours > 0).length;
+    const totalHours = results.reduce((sum, r) => sum + r.hours, 0);
+    const totalPayroll = results.reduce((sum, r) => sum + r.salary, 0);
+    const avgSalary = totalStaff > 0 ? totalPayroll / totalStaff : 0;
+
+    document.getElementById('totalStaff').textContent = totalStaff;
+    document.getElementById('totalHours').textContent = totalHours.toFixed(1);
+    document.getElementById('totalPayroll').textContent = `RM ${totalPayroll.toFixed(2)}`;
+    document.getElementById('avgSalary').textContent = `RM ${avgSalary.toFixed(2)}`;
+  }
+
+  function renderBreakdowns(results) {
+    const section = document.getElementById('breakdownSection');
+    const container = document.getElementById('breakdownCards');
+
+    const withHours = results.filter(r => r.hours > 0);
+    if (withHours.length === 0) {
+      section.style.display = 'none';
+      return;
+    }
+
+    section.style.display = 'block';
+    container.innerHTML = withHours.map(r => `
+      <div class="col-md-6 col-lg-4">
+        <div class="section-card">
+          <div class="section-body">
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <div class="staff-avatar" style="width:50px;height:50px;font-size:1.2rem">
+                ${r.staff.photoUrl ? `<img src="${r.staff.photoUrl}">` : r.staff.name?.charAt(0) || '?'}
+              </div>
+              <div>
+                <div class="fw-bold">${r.staff.name}</div>
+                <small class="text-muted text-capitalize">${r.staff.position || '-'}</small>
+              </div>
+            </div>
+            <div class="payroll-detail">
+              <div class="payroll-detail-row">
+                <span class="payroll-detail-label">Hours Worked</span>
+                <span>${r.hours.toFixed(2)} hrs</span>
+              </div>
+              <div class="payroll-detail-row">
+                <span class="payroll-detail-label">Pay Rate</span>
+                <span>RM ${parseFloat(r.staff.payRate || 0).toFixed(2)}/hr</span>
+              </div>
+              <div class="payroll-detail-row">
+                <span class="payroll-detail-label">Days Worked</span>
+                <span>${r.records.length} days</span>
+              </div>
+              <div class="payroll-detail-row">
+                <span class="payroll-detail-label">Total Salary</span>
+                <span>RM ${r.salary.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+</script>
+</body>
+</html>

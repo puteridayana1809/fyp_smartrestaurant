@@ -10,7 +10,7 @@
     :root {
       --primary-yellow: #F5C518;
       --primary-dark: #1a1a2e;
-      --sidebar-bg: #fefefe;
+      --sidebar-bg: linear-gradient(180deg, #2d5016 0%, #3a6319 100%);
       --card-shadow: 0 4px 20px rgba(0,0,0,0.06);
       --accent-green: #22c55e;
       --accent-red: #ef4444;
@@ -33,7 +33,7 @@
       bottom: 0;
       width: 260px;
       background: var(--sidebar-bg);
-      border-right: 1px solid #eee;
+      border-right: 2px solid #4a7c23;
       padding: 20px;
       transition: transform 0.3s ease-in-out;
       z-index: 1000;
@@ -69,7 +69,7 @@
       margin: 0;
       font-size: 1rem;
       font-weight: 700;
-      color: #1a1a1a;
+      color: #ffffff;
       line-height: 1.2;
     }
 
@@ -107,7 +107,7 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      color: #555 !important;
+      color: rgba(255, 255, 255, 0.85) !important;
       text-decoration: none;
       padding: 12px 14px;
       border-radius: 10px;
@@ -124,8 +124,9 @@
     }
 
     .sidebar a.active {
-      background: linear-gradient(135deg, #1a1a2e 0%, #2d3561 100%);
+      background: rgba(245, 197, 24, 0.2);
       color: #fff !important;
+      border: 1px solid var(--primary-yellow);
     }
 
     .sidebar a.active i {
@@ -133,8 +134,8 @@
     }
 
     .sidebar a:hover:not(.active) {
-      background: #f5f5f5;
-      color: #1a1a1a !important;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff !important;
     }
 
     .sidebar .menu-toggle {
@@ -143,7 +144,7 @@
     }
 
     .sidebar .menu-toggle:hover {
-      background: #f5f5f5;
+      background: rgba(255, 255, 255, 0.1);
     }
 
     .sidebar .menu-toggle .arrow {
@@ -158,7 +159,7 @@
     .sidebar .submenu {
       margin-left: 20px;
       padding-left: 12px;
-      border-left: 2px solid #e0e0e0;
+      border-left: 2px solid rgba(255, 255, 255, 0.3);
     }
 
     .sidebar .submenu a {
@@ -167,7 +168,7 @@
     }
 
     .sidebar-footer {
-      border-top: 1px solid #eee;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
       padding-top: 16px;
       margin-top: auto;
     }
@@ -177,7 +178,7 @@
       align-items: center;
       gap: 12px;
       padding: 12px;
-      background: #f8f9fc;
+      background: rgba(255, 255, 255, 0.1);
       border-radius: 12px;
       margin-bottom: 12px;
     }
@@ -201,12 +202,12 @@
     .user-details .name {
       font-weight: 600;
       font-size: 0.9rem;
-      color: #1a1a1a;
+      color: #ffffff;
     }
 
     .user-details .role {
       font-size: 0.75rem;
-      color: #888;
+      color: rgba(255, 255, 255, 0.7);
     }
 
     .sidebar.closed {
@@ -417,14 +418,28 @@
         Menu Management
       </a>
     </div>
-    <a href="staffmanagement.html">
-      <i class="fas fa-users"></i>
-      <span>Staff Access</span>
-    </a>
-    <a href="groceriesmanagement.html">
-      <i class="fas fa-carrot"></i>
-      <span>Groceries</span>
-    </a>
+    
+    <div class="menu-toggle" id="staffToggle">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <i class="fas fa-users"></i>
+        <span>Staff Management</span>
+      </div>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="submenu" id="staffSubmenu" style="display:none">
+      <a href="staffmanagement.html">
+        <i class="fas fa-id-card"></i>
+        Staff Directory
+      </a>
+      <a href="staffattendance.html">
+        <i class="fas fa-clock"></i>
+        Attendance
+      </a>
+      <a href="staffpayroll.html">
+        <i class="fas fa-money-bill-wave"></i>
+        Payroll
+      </a>
+    </div>
   </nav>
 
   <div class="sidebar-footer">
@@ -435,7 +450,7 @@
         <div class="role">Admin</div>
       </div>
     </div>
-    <button id="logoutBtn" class="btn btn-outline-dark btn-sm w-100">
+    <button id="logoutBtn" class="btn btn-danger btn-sm w-100">
       <i class="fas fa-sign-out-alt me-2"></i>Logout
     </button>
   </div>
@@ -513,7 +528,14 @@
         <div class="card-header-custom">
           <i class="fas fa-list"></i> Current Menu
         </div>
-        <div class="card-body-custom p-0">
+        <div class="card-body-custom">
+          <!-- Category Filter Buttons -->
+          <div class="mb-3 d-flex flex-wrap gap-2" id="categoryFilters">
+            <button class="btn btn-sm btn-outline-primary active" data-category="all">
+              <i class="fas fa-th-large me-1"></i>All
+            </button>
+          </div>
+          
           <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
             <table class="table table-hover mb-0">
               <thead style="position: sticky; top: 0; z-index: 1;">
@@ -602,7 +624,7 @@
     getDoc, getDocs, orderBy, query, serverTimestamp, setDoc
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-  import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+  import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
   import { firebaseConfig, RESTAURANT_ID } from "../js/firebase-config.esm.js";
 
   const app = initializeApp(firebaseConfig);
@@ -653,6 +675,14 @@
   storeToggle?.addEventListener('click', () => {
     storeToggle.classList.toggle('collapsed');
     storeSubmenu.style.display = storeSubmenu.style.display === 'none' ? 'block' : 'none';
+  });
+
+  // Staff submenu toggle
+  const staffToggle = document.getElementById('staffToggle');
+  const staffSubmenu = document.getElementById('staffSubmenu');
+  staffToggle?.addEventListener('click', () => {
+    staffToggle.classList.toggle('collapsed');
+    staffSubmenu.style.display = staffSubmenu.style.display === 'none' ? 'block' : 'none';
   });
 
   function enableAdminUI(enabled) {
@@ -770,13 +800,40 @@
       const storageRef = ref(storage, `restaurants/${RESTAURANT_ID}/menu-images/${itemId}_${Date.now()}.jpg`);
       console.log('Uploading to Firebase Storage...');
       
-      await uploadBytes(storageRef, compressedBlob);
-      console.log('Upload complete, getting download URL...');
+      const metadata = {
+        contentType: 'image/jpeg',
+        customMetadata: {
+          'uploadedBy': 'menuManager',
+          'itemId': itemId
+        }
+      };
       
-      const downloadURL = await getDownloadURL(storageRef);
-      console.log('Download URL obtained:', downloadURL);
+      // Use uploadBytesResumable for better error handling
+      const uploadTask = uploadBytesResumable(storageRef, compressedBlob, metadata);
       
-      return downloadURL;
+      return new Promise((resolve, reject) => {
+        uploadTask.on('state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            console.log('Upload progress: ' + progress.toFixed(0) + '%');
+          },
+          (error) => {
+            console.error('Upload error:', error);
+            reject(error);
+          },
+          async () => {
+            console.log('Upload complete, getting download URL...');
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              console.log('Download URL obtained:', downloadURL);
+              resolve(downloadURL);
+            } catch (err) {
+              console.error('Error getting download URL:', err);
+              reject(err);
+            }
+          }
+        );
+      });
     } catch (error) {
       console.error('Error uploading image:', error);
       throw error;
@@ -873,19 +930,74 @@
   });
 
   // Load menu
+  let allMenuItems = []; // Store all items globally
+  let currentFilter = 'all'; // Track current filter
+
   async function loadMenu() {
     menuTbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
     const qMenu = query(rcol("menuItems"), orderBy("name", "asc"));
     const snap = await getDocs(qMenu);
-    const rows = [];
+    allMenuItems = []; // Clear array
+    const categories = new Set();
 
     snap.forEach(ds => {
       const m = ds.data();
+      allMenuItems.push({ id: ds.id, ...m });
+      if (m.categoryId) categories.add(m.categoryId);
+    });
+
+    // Update category filter buttons
+    updateCategoryFilters(categories);
+    
+    // Display items based on current filter
+    displayFilteredMenu(currentFilter);
+  }
+
+  // Update category filter buttons
+  function updateCategoryFilters(categories) {
+    const filtersDiv = document.getElementById('categoryFilters');
+    const categoryIcons = {
+      'minuman': 'fa-glass-water',
+      'goreng': 'fa-fire-burner',
+      'sup': 'fa-bowl-food'
+    };
+
+    let html = `<button class="btn btn-sm btn-outline-primary ${currentFilter === 'all' ? 'active' : ''}" data-category="all">
+      <i class="fas fa-th-large me-1"></i>All
+    </button>`;
+
+    categories.forEach(cat => {
+      const icon = categoryIcons[cat] || 'fa-utensils';
+      html += `<button class="btn btn-sm btn-outline-primary ${currentFilter === cat ? 'active' : ''}" data-category="${cat}">
+        <i class="fas ${icon} me-1"></i>${cat.charAt(0).toUpperCase() + cat.slice(1)}
+      </button>`;
+    });
+
+    filtersDiv.innerHTML = html;
+
+    // Add click handlers
+    filtersDiv.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentFilter = btn.dataset.category;
+        filtersDiv.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        displayFilteredMenu(currentFilter);
+      });
+    });
+  }
+
+  // Display filtered menu items
+  function displayFilteredMenu(filter) {
+    const filteredItems = filter === 'all' 
+      ? allMenuItems 
+      : allMenuItems.filter(item => item.categoryId === filter);
+
+    const rows = filteredItems.map(m => {
       const imageHtml = m.imageUrl
         ? `<img src="${m.imageUrl}" class="menu-item-image" alt="${m.name}">`
         : `<div style="width:60px;height:60px;background:#f0f0f0;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#999;"><i class="fas fa-camera"></i></div>`;
 
-      rows.push(`
+      return `
         <tr>
           <td>${imageHtml}</td>
           <td class="ellipsis"><strong>${m.name}</strong></td>
@@ -894,7 +1006,7 @@
           <td>${m.isAvailable ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>'}</td>
           <td class="text-end">
             <button class="btn btn-sm btn-primary"
-              data-id="${ds.id}"
+              data-id="${m.id}"
               data-name="${m.name}"
               data-price="${m.price}"
               data-cat="${m.categoryId}"
@@ -905,10 +1017,10 @@
             </button>
           </td>
         </tr>
-      `);
+      `;
     });
 
-    menuTbody.innerHTML = rows.join("") || '<tr><td colspan="6" class="text-center py-4 text-muted">No items yet.</td></tr>';
+    menuTbody.innerHTML = rows.join("") || '<tr><td colspan="6" class="text-center py-4 text-muted">No items in this category.</td></tr>';
   }
 
   // Add item
