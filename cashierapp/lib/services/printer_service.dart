@@ -86,7 +86,8 @@ class PrinterService {
       'Terima Kasih!',
       styles: const PosStyles(align: PosAlign.center),
     );
-    bytes += generator.cut();
+    bytes += generator.feed(1);
+    bytes += '\x1DV0'.codeUnits; // GS V 0 - full cut, no extra feed
 
     return PrintBluetoothThermal.writeBytes(bytes);
   }
