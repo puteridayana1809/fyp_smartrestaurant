@@ -235,42 +235,114 @@ class _CashierScreenState extends State<CashierScreen> {
     final totals = _totals(order);
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Order ${order.id}'),
-        content: SizedBox(
-          width: 350,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final item in order.items)
-                ListTile(
-                  dense: true,
-                  title: Text('${item.qty}x ${item.name}'),
-                  trailing: Text('RM ${item.total.toStringAsFixed(2)}'),
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: kedahGreen.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.receipt_long, color: kedahGreen),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Order ${order.id}',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          Text('Meja ${order.table ?? '-'}',
+                              style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              const Divider(),
-              ListTile(
-                dense: true,
-                title: const Text('Total', style: TextStyle(fontWeight: FontWeight.bold)),
-                trailing: Text('RM ${(order.total ?? totals.total).toStringAsFixed(2)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 280),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F9FC),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    child: Column(
+                      children: [
+                        for (final item in order.items)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 26, height: 22,
+                                  decoration: BoxDecoration(color: kedahGreen, borderRadius: BorderRadius.circular(6)),
+                                  alignment: Alignment.center,
+                                  child: Text('${item.qty}×',
+                                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(child: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600))),
+                                Text('RM ${item.total.toStringAsFixed(2)}',
+                                    style: const TextStyle(color: accentGreen, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [kedahGreen, kedahLight]),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('TOTAL', style: TextStyle(color: Colors.white, fontSize: 13)),
+                      Text('RM ${(order.total ?? totals.total).toStringAsFixed(2)}',
+                          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => _printReceipt(
+                        order,
+                        order.table ?? '-',
+                        order.payment ?? 'Cash',
+                        order.items,
+                        (order.total ?? totals.total).toDouble(),
+                      ),
+                      icon: const Icon(Icons.print, size: 18),
+                      label: const Text('Cetak Resit'),
+                    ),
+                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => _printReceipt(
-              order,
-              order.table ?? '-',
-              order.payment ?? 'Cash',
-              order.items,
-              (order.total ?? totals.total).toDouble(),
-            ),
-            child: const Text('Cetak Resit'),
-          ),
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
-        ],
       ),
     );
   }
@@ -543,7 +615,34 @@ class _CashierScreenState extends State<CashierScreen> {
           ],
         ),
         const SizedBox(height: 14),
-        const Text('ORDER ITEMS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('ORDER ITEMS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.done_all, size: 18),
+                  tooltip: 'Pilih Semua',
+                  onPressed: () => setState(() {
+                    for (var i = 0; i < order.items.length; i++) {
+                      _selectedQty[i] = order.items[i].remainingQty;
+                    }
+                  }),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  tooltip: 'Kosongkan',
+                  onPressed: () => setState(() => _selectedQty = {}),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                ),
+              ],
+            ),
+          ],
+        ),
         const SizedBox(height: 6),
         Container(
           constraints: const BoxConstraints(maxHeight: 220),
