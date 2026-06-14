@@ -189,6 +189,7 @@
     .user-avatar {
       width: 42px;
       height: 42px;
+      flex-shrink: 0;
       background: var(--primary-yellow);
       border-radius: 50%;
       display: flex;
@@ -200,12 +201,16 @@
 
     .user-details {
       flex: 1;
+      min-width: 0;
     }
 
     .user-details .name {
       font-weight: 600;
       font-size: 0.9rem;
       color: #ffffff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .user-details .role {
@@ -958,7 +963,7 @@ document.addEventListener('click', async (e) => {
   e.preventDefault();
   try {
     await signOut(auth);
-    window.location.href = "/index.html";
+    window.location.href = "index.html";
   } catch (err) {
     alert("Logout failed: " + err.message);
   }
