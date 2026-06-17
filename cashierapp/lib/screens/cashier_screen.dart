@@ -8,6 +8,7 @@ import '../models/restaurant_table.dart';
 import '../services/constants.dart';
 import '../services/printer_service.dart';
 import 'login_screen.dart';
+import 'opening_drawer_screen.dart';
 import 'printer_settings_screen.dart';
 
 const kedahGreen = Color(0xFF2D5016);
@@ -41,7 +42,9 @@ class _CashierScreenState extends State<CashierScreen> {
     int groupOf(String label) {
       if (RegExp(r'^T\d+$', caseSensitive: false).hasMatch(label)) return 0;
       if (RegExp(r'^\d+$').hasMatch(label)) return 1;
-      if (RegExp(r'^B(ungkus)?\s*\d+$', caseSensitive: false).hasMatch(label)) return 2;
+      if (RegExp(r'^B(ungkus)?\s*\d+$', caseSensitive: false).hasMatch(label)) {
+        return 2;
+      }
       return 3;
     }
 
@@ -79,10 +82,17 @@ class _CashierScreenState extends State<CashierScreen> {
     }
   }
 
-  ({double subtotal, double remainingTotal, double total}) _totals(RestaurantOrder order) {
-    final subtotal = order.items.fold<double>(0, (total, item) => total + item.total);
+  ({double subtotal, double remainingTotal, double total}) _totals(
+    RestaurantOrder order,
+  ) {
+    final subtotal = order.items.fold<double>(
+      0,
+      (total, item) => total + item.total,
+    );
     final remaining = order.items.fold<double>(
-        0, (total, item) => total + item.remainingQty * item.unitPrice);
+      0,
+      (total, item) => total + item.remainingQty * item.unitPrice,
+    );
     return (subtotal: subtotal, remainingTotal: remaining, total: subtotal);
   }
 
@@ -113,7 +123,13 @@ class _CashierScreenState extends State<CashierScreen> {
       final selectedQty = _selectedQty[i] ?? 0;
       if (selectedQty > 0) {
         updatedItems.add(item.copyWith(paidQty: item.paidQty + selectedQty));
-        paidNowItems.add(OrderItem(name: item.name, unitPrice: item.unitPrice, qty: selectedQty));
+        paidNowItems.add(
+          OrderItem(
+            name: item.name,
+            unitPrice: item.unitPrice,
+            qty: selectedQty,
+          ),
+        );
       } else {
         updatedItems.add(item);
       }
@@ -136,9 +152,15 @@ class _CashierScreenState extends State<CashierScreen> {
       });
 
       if (isFullyPaid) {
-        final paymentsSnap = await _col('orders').doc(order.id).collection('payments').get();
-        final methods = paymentsSnap.docs.map((d) => d.data()['method']?.toString()).toSet();
-        final finalPayment = methods.length > 1 ? 'Split' : (methods.first ?? method);
+        final paymentsSnap = await _col(
+          'orders',
+        ).doc(order.id).collection('payments').get();
+        final methods = paymentsSnap.docs
+            .map((d) => d.data()['method']?.toString())
+            .toSet();
+        final finalPayment = methods.length > 1
+            ? 'Split'
+            : (methods.first ?? method);
 
         await _col('orders').doc(order.id).update({
           'status': 'completed',
@@ -163,14 +185,26 @@ class _CashierScreenState extends State<CashierScreen> {
           title: const Text('Pembayaran direkod'),
           content: const Text('Cetak resit melalui printer Bluetooth?'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Tidak')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Cetak')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Tidak'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Cetak'),
+            ),
           ],
         ),
       );
 
       if (shouldPrint == true) {
-        await _printReceipt(order, table.name, method, paidNowItems, selectedAmount);
+        await _printReceipt(
+          order,
+          table.name,
+          method,
+          paidNowItems,
+          selectedAmount,
+        );
       }
 
       if (isFullyPaid) {
@@ -193,10 +227,114 @@ class _CashierScreenState extends State<CashierScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ralat: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ralat: $e')));
       }
     } finally {
       if (mounted) setState(() => _completing = false);
+    }
+  }
+
+  Future<void> _removeOrderItem(RestaurantOrder order, int index) async {
+    final table = _selectedTable;
+    if (table == null || index < 0 || index >= order.items.length) return;
+
+    final item = order.items[index];
+    if (item.paidQty > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Item yang sudah dibayar tidak boleh dipadam.'),
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Padam item?'),
+        content: Text('Padam "${item.name}" daripada order ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: accentRed),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Padam'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final updatedItems = [...order.items]..removeAt(index);
+    final newTotal = updatedItems.fold<double>(
+      0,
+      (total, item) => total + item.total,
+    );
+    final batch = _db.batch();
+    final orderRef = _col('orders').doc(order.id);
+
+    if (updatedItems.isEmpty) {
+      batch.update(orderRef, {
+        'items': [],
+        'status': 'cancelled',
+        'total': 0,
+        'cancelledAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      batch.update(_col('tables').doc(table.id), {
+        'status': 'available',
+        'activeOrderId': null,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } else {
+      batch.update(orderRef, {
+        'items': updatedItems.map((item) => item.toMap()).toList(),
+        'total': newTotal,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    try {
+      await batch.commit();
+      if (!mounted) return;
+
+      if (updatedItems.isEmpty) {
+        setState(() {
+          _selectedOrder = null;
+          _selectedTable = null;
+          _selectedPayment = null;
+          _selectedQty = {};
+        });
+      } else {
+        setState(() {
+          _selectedOrder = RestaurantOrder.fromMap(order.id, {
+            'items': updatedItems.map((item) => item.toMap()).toList(),
+            'status': order.status,
+            'table': order.table,
+            'total': newTotal,
+          });
+          _selectedQty = {};
+        });
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            updatedItems.isEmpty ? 'Order dibatalkan' : 'Item dipadam',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ralat padam item: $e')));
     }
   }
 
@@ -211,7 +349,11 @@ class _CashierScreenState extends State<CashierScreen> {
     if (!connected) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Printer tidak disambung. Sila sambung di Tetapan Printer.')),
+        const SnackBar(
+          content: Text(
+            'Printer tidak disambung. Sila sambung di Tetapan Printer.',
+          ),
+        ),
       );
       return;
     }
@@ -262,10 +404,20 @@ class _CashierScreenState extends State<CashierScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Order ${order.id}',
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                          Text('Meja ${order.table ?? '-'}',
-                              style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          Text(
+                            'Order ${order.id}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Meja ${order.table ?? '-'}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -279,7 +431,10 @@ class _CashierScreenState extends State<CashierScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
                     child: Column(
                       children: [
                         for (final item in order.items)
@@ -288,16 +443,38 @@ class _CashierScreenState extends State<CashierScreen> {
                             child: Row(
                               children: [
                                 Container(
-                                  width: 26, height: 22,
-                                  decoration: BoxDecoration(color: kedahGreen, borderRadius: BorderRadius.circular(6)),
+                                  width: 26,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    color: kedahGreen,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
                                   alignment: Alignment.center,
-                                  child: Text('${item.qty}×',
-                                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                  child: Text(
+                                    '${item.qty}×',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(width: 10),
-                                Expanded(child: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600))),
-                                Text('RM ${item.total.toStringAsFixed(2)}',
-                                    style: const TextStyle(color: accentGreen, fontWeight: FontWeight.bold)),
+                                Expanded(
+                                  child: Text(
+                                    item.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  'RM ${item.total.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    color: accentGreen,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -307,17 +484,31 @@ class _CashierScreenState extends State<CashierScreen> {
                 ),
                 const SizedBox(height: 14),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [kedahGreen, kedahLight]),
+                    gradient: const LinearGradient(
+                      colors: [kedahGreen, kedahLight],
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('TOTAL', style: TextStyle(color: Colors.white, fontSize: 13)),
-                      Text('RM ${(order.total ?? totals.total).toStringAsFixed(2)}',
-                          style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                      const Text(
+                        'TOTAL',
+                        style: TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                      Text(
+                        'RM ${(order.total ?? totals.total).toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -336,7 +527,10 @@ class _CashierScreenState extends State<CashierScreen> {
                       icon: const Icon(Icons.print, size: 18),
                       label: const Text('Cetak Resit'),
                     ),
-                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Tutup'),
+                    ),
                   ],
                 ),
               ],
@@ -362,9 +556,14 @@ class _CashierScreenState extends State<CashierScreen> {
             if (_sidebarOpen) ...[
               const SizedBox(width: 16),
               Expanded(
-                child: Text(label,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                    overflow: TextOverflow.ellipsis),
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ],
@@ -388,7 +587,19 @@ class _CashierScreenState extends State<CashierScreen> {
                     label: 'Device Management',
                     onPressed: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const PrinterSettingsScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const PrinterSettingsScreen(),
+                      ),
+                    ),
+                  ),
+                  _sidebarItem(
+                    icon: Icons.point_of_sale,
+                    label: 'Opening Drawer',
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const OpeningDrawerScreen(),
+                      ),
                     ),
                   ),
                   const Spacer(),
@@ -430,26 +641,30 @@ class _CashierScreenState extends State<CashierScreen> {
           _buildSidebar(),
           Expanded(
             child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = constraints.maxWidth > 900;
-          final tablesSection = _buildTablesSection();
-          final panel = _buildCashierPanel();
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth > 900;
+                final tablesSection = _buildTablesSection();
+                final panel = _buildCashierPanel();
 
-          if (isWide) {
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(flex: 2, child: SingleChildScrollView(child: tablesSection)),
-                SizedBox(width: 380, child: SingleChildScrollView(child: panel)),
-              ],
-            );
-          }
-          return SingleChildScrollView(
-            child: Column(
-              children: [tablesSection, panel],
-            ),
-          );
-        },
+                if (isWide) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: SingleChildScrollView(child: tablesSection),
+                      ),
+                      SizedBox(
+                        width: 380,
+                        child: SingleChildScrollView(child: panel),
+                      ),
+                    ],
+                  );
+                }
+                return SingleChildScrollView(
+                  child: Column(children: [tablesSection, panel]),
+                );
+              },
             ),
           ),
         ],
@@ -476,8 +691,14 @@ class _CashierScreenState extends State<CashierScreen> {
                 children: [
                   Icon(Icons.restaurant, color: kedahYellow),
                   SizedBox(width: 10),
-                  Text('Tables & Orders',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(
+                    'Tables & Orders',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -492,19 +713,22 @@ class _CashierScreenState extends State<CashierScreen> {
                       child: Center(child: CircularProgressIndicator()),
                     );
                   }
-                  final tables = _sortTables(snapshot.data!.docs
-                      .map((d) => RestaurantTable.fromMap(d.id, d.data()))
-                      .toList());
+                  final tables = _sortTables(
+                    snapshot.data!.docs
+                        .map((d) => RestaurantTable.fromMap(d.id, d.data()))
+                        .toList(),
+                  );
 
                   return GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 100,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 1,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 100,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 1,
+                        ),
                     itemCount: tables.length,
                     itemBuilder: (context, index) {
                       final table = tables[index];
@@ -521,20 +745,31 @@ class _CashierScreenState extends State<CashierScreen> {
                             decoration: isSelected
                                 ? BoxDecoration(
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: kedahGreen, width: 4),
+                                    border: Border.all(
+                                      color: kedahGreen,
+                                      width: 4,
+                                    ),
                                   )
                                 : null,
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Text(table.name,
-                                    style: const TextStyle(
-                                        color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                                Text(
+                                  table.name,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
                                 const SizedBox(height: 4),
                                 Text(
                                   table.hasOrder ? 'RECEIVED' : 'AVAILABLE',
                                   style: const TextStyle(
-                                      color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600),
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ],
                             ),
@@ -588,11 +823,20 @@ class _CashierScreenState extends State<CashierScreen> {
                         color: kedahGreen.withValues(alpha: 0.08),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.touch_app_outlined, size: 36, color: kedahLight),
+                      child: const Icon(
+                        Icons.touch_app_outlined,
+                        size: 36,
+                        color: kedahLight,
+                      ),
                     ),
                     const SizedBox(height: 16),
-                    const Text('Pilih meja yang mempunyai order',
-                        style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
+                    const Text(
+                      'Pilih meja yang mempunyai order',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
                 ),
               )
@@ -618,7 +862,14 @@ class _CashierScreenState extends State<CashierScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('ORDER ITEMS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+            const Text(
+              'ORDER ITEMS',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
             Row(
               children: [
                 IconButton(
@@ -630,14 +881,20 @@ class _CashierScreenState extends State<CashierScreen> {
                     }
                   }),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  constraints: const BoxConstraints(
+                    minWidth: 28,
+                    minHeight: 28,
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close, size: 18),
                   tooltip: 'Kosongkan',
                   onPressed: () => setState(() => _selectedQty = {}),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  constraints: const BoxConstraints(
+                    minWidth: 28,
+                    minHeight: 28,
+                  ),
                 ),
               ],
             ),
@@ -653,7 +910,12 @@ class _CashierScreenState extends State<CashierScreen> {
           child: order.items.isEmpty
               ? const Padding(
                   padding: EdgeInsets.all(16),
-                  child: Center(child: Text('No items', style: TextStyle(color: Colors.grey))),
+                  child: Center(
+                    child: Text(
+                      'No items',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
                 )
               : ListView.builder(
                   shrinkWrap: true,
@@ -664,11 +926,19 @@ class _CashierScreenState extends State<CashierScreen> {
                     final selected = _selectedQty[index] ?? 0;
                     return Container(
                       margin: const EdgeInsets.all(5),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border(left: BorderSide(color: remaining == 0 ? Colors.grey : kedahYellow, width: 3)),
+                        border: Border(
+                          left: BorderSide(
+                            color: remaining == 0 ? Colors.grey : kedahYellow,
+                            width: 3,
+                          ),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -676,10 +946,21 @@ class _CashierScreenState extends State<CashierScreen> {
                           Row(
                             children: [
                               Container(
-                                width: 28, height: 24,
-                                decoration: BoxDecoration(color: kedahGreen, borderRadius: BorderRadius.circular(6)),
+                                width: 28,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: kedahGreen,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
                                 alignment: Alignment.center,
-                                child: Text('${item.qty}×', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                                child: Text(
+                                  '${item.qty}×',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -687,45 +968,114 @@ class _CashierScreenState extends State<CashierScreen> {
                                   item.name,
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
-                                    color: remaining == 0 ? Colors.grey : Colors.black,
-                                    decoration: remaining == 0 ? TextDecoration.lineThrough : null,
+                                    color: remaining == 0
+                                        ? Colors.grey
+                                        : Colors.black,
+                                    decoration: remaining == 0
+                                        ? TextDecoration.lineThrough
+                                        : null,
                                   ),
                                 ),
                               ),
-                              Text('RM ${item.total.toStringAsFixed(2)}', style: const TextStyle(color: accentGreen, fontWeight: FontWeight.bold)),
+                              Text(
+                                'RM ${item.total.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  color: accentGreen,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  size: 20,
+                                ),
+                                color: accentRed,
+                                tooltip: item.paidQty > 0
+                                    ? 'Item sudah dibayar'
+                                    : 'Padam item',
+                                onPressed: item.paidQty > 0
+                                    ? null
+                                    : () => _removeOrderItem(order, index),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 30,
+                                  minHeight: 30,
+                                ),
+                              ),
                             ],
                           ),
                           if (item.paidQty > 0)
                             Padding(
                               padding: const EdgeInsets.only(top: 4, left: 38),
-                              child: Text('Dibayar: ${item.paidQty}/${item.qty}',
-                                  style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                              child: Text(
+                                'Dibayar: ${item.paidQty}/${item.qty}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey,
+                                ),
+                              ),
                             ),
                           if (remaining > 0)
                             Padding(
                               padding: const EdgeInsets.only(top: 6, left: 38),
                               child: Row(
                                 children: [
-                                  const Text('Bayar:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                  const Text(
+                                    'Bayar:',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
                                   const SizedBox(width: 8),
                                   IconButton(
-                                    icon: const Icon(Icons.remove_circle_outline, size: 20),
+                                    icon: const Icon(
+                                      Icons.remove_circle_outline,
+                                      size: 20,
+                                    ),
                                     onPressed: selected > 0
-                                        ? () => setState(() => _selectedQty[index] = selected - 1)
+                                        ? () => setState(
+                                            () => _selectedQty[index] =
+                                                selected - 1,
+                                          )
                                         : null,
                                     padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 28,
+                                      minHeight: 28,
+                                    ),
                                   ),
-                                  Text('$selected', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  Text(
+                                    '$selected',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                   IconButton(
-                                    icon: const Icon(Icons.add_circle_outline, size: 20),
+                                    icon: const Icon(
+                                      Icons.add_circle_outline,
+                                      size: 20,
+                                    ),
                                     onPressed: selected < remaining
-                                        ? () => setState(() => _selectedQty[index] = selected + 1)
+                                        ? () => setState(
+                                            () => _selectedQty[index] =
+                                                selected + 1,
+                                          )
                                         : null,
                                     padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 28,
+                                      minHeight: 28,
+                                    ),
                                   ),
-                                  Text('/ $remaining baki', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                  Text(
+                                    '/ $remaining baki',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -748,14 +1098,30 @@ class _CashierScreenState extends State<CashierScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('BAKI', style: TextStyle(color: Colors.white, fontSize: 13)),
-              Text('RM ${totals.remainingTotal.toStringAsFixed(2)}',
-                  style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+              const Text(
+                'BAKI',
+                style: TextStyle(color: Colors.white, fontSize: 13),
+              ),
+              Text(
+                'RM ${totals.remainingTotal.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         ),
         const SizedBox(height: 16),
-        const Text('PAYMENT METHOD', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+        const Text(
+          'PAYMENT METHOD',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
+          ),
+        ),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -768,7 +1134,10 @@ class _CashierScreenState extends State<CashierScreen> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: (_selectedPayment != null && !_completing && _selectedTotal(order) > 0)
+            onPressed:
+                (_selectedPayment != null &&
+                    !_completing &&
+                    _selectedTotal(order) > 0)
                 ? _payForSelection
                 : null,
             style: ElevatedButton.styleFrom(
@@ -777,7 +1146,14 @@ class _CashierScreenState extends State<CashierScreen> {
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             icon: _completing
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
                 : const Icon(Icons.check_circle),
             label: Text(_completing ? 'Processing...' : 'Bayar Item Dipilih'),
           ),
@@ -789,12 +1165,29 @@ class _CashierScreenState extends State<CashierScreen> {
   Widget _infoBox(String label, String value) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(color: const Color(0xFFF8F9FC), borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FC),
+        borderRadius: BorderRadius.circular(10),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kedahGreen)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: kedahGreen,
+            ),
+          ),
         ],
       ),
     );
@@ -807,7 +1200,10 @@ class _CashierScreenState extends State<CashierScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(color: Colors.grey)),
-          Text('RM ${value.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(
+            'RM ${value.toStringAsFixed(2)}',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
         ],
       ),
     );
@@ -820,7 +1216,10 @@ class _CashierScreenState extends State<CashierScreen> {
       style: OutlinedButton.styleFrom(
         backgroundColor: selected ? kedahGreen : Colors.white,
         foregroundColor: selected ? Colors.white : Colors.black87,
-        side: BorderSide(color: selected ? kedahGreen : const Color(0xFFE5E7EB), width: 2),
+        side: BorderSide(
+          color: selected ? kedahGreen : const Color(0xFFE5E7EB),
+          width: 2,
+        ),
         padding: const EdgeInsets.symmetric(vertical: 12),
       ),
       icon: Icon(icon),
@@ -851,23 +1250,36 @@ class _CashierScreenState extends State<CashierScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   alignment: Alignment.center,
-                  child: const Icon(Icons.receipt_long, size: 15, color: kedahGreen),
+                  child: const Icon(
+                    Icons.receipt_long,
+                    size: 15,
+                    color: kedahGreen,
+                  ),
                 ),
                 const SizedBox(width: 10),
-                const Text('RECENT PAYMENTS',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: kedahGreen, letterSpacing: 0.5)),
+                const Text(
+                  'RECENT PAYMENTS',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: kedahGreen,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ],
             ),
           ),
           const Divider(height: 1),
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-            stream: _col('orders')
-                .orderBy('completedAt', descending: true)
-                .limit(15)
-                .snapshots(),
+            stream: _col(
+              'orders',
+            ).orderBy('completedAt', descending: true).limit(15).snapshots(),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
-                return const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()));
+                return const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: CircularProgressIndicator()),
+                );
               }
               final completed = snapshot.data!.docs
                   .map((d) => RestaurantOrder.fromMap(d.id, d.data()))
@@ -877,7 +1289,15 @@ class _CashierScreenState extends State<CashierScreen> {
               if (completed.isEmpty) {
                 return const Padding(
                   padding: EdgeInsets.all(24),
-                  child: Center(child: Text('No recent payments', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic))),
+                  child: Center(
+                    child: Text(
+                      'No recent payments',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
                 );
               }
 
@@ -885,16 +1305,21 @@ class _CashierScreenState extends State<CashierScreen> {
                 constraints: const BoxConstraints(maxHeight: 280),
                 child: ListView.separated(
                   shrinkWrap: true,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   itemCount: completed.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1, indent: 8, endIndent: 8),
+                  separatorBuilder: (_, _) =>
+                      const Divider(height: 1, indent: 8, endIndent: 8),
                   itemBuilder: (context, index) {
                     final order = completed[index];
                     final timestamp = order.completedAt;
                     String timeStr = '-';
                     if (timestamp is Timestamp) {
                       final dt = timestamp.toDate();
-                      timeStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+                      timeStr =
+                          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
                     }
                     final method = order.payment ?? 'Cash';
                     final badgeColor = switch (method) {
@@ -907,7 +1332,10 @@ class _CashierScreenState extends State<CashierScreen> {
                       borderRadius: BorderRadius.circular(12),
                       onTap: () => _showOrderDetailsDialog(order),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 8,
+                          horizontal: 8,
+                        ),
                         child: Row(
                           children: [
                             Container(
@@ -918,8 +1346,14 @@ class _CashierScreenState extends State<CashierScreen> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               alignment: Alignment.center,
-                              child: Text(order.table ?? '-',
-                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: kedahGreen)),
+                              child: Text(
+                                order.table ?? '-',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: kedahGreen,
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
@@ -927,28 +1361,61 @@ class _CashierScreenState extends State<CashierScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    order.id.length > 8 ? order.id.substring(order.id.length - 8) : order.id,
-                                    style: const TextStyle(fontFamily: 'monospace', fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87),
+                                    order.id.length > 8
+                                        ? order.id.substring(
+                                            order.id.length - 8,
+                                          )
+                                        : order.id,
+                                    style: const TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
                                   ),
                                   const SizedBox(height: 2),
-                                  Text(timeStr, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                  Text(
+                                    timeStr,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: badgeColor.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(20),
                               ),
-                              child: Text(method,
-                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: badgeColor)),
+                              child: Text(
+                                method,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: badgeColor,
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 10),
-                            Text('RM ${(order.total ?? 0).toStringAsFixed(2)}',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            Text(
+                              'RM ${(order.total ?? 0).toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
                             const SizedBox(width: 4),
-                            const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+                            const Icon(
+                              Icons.chevron_right,
+                              size: 18,
+                              color: Colors.grey,
+                            ),
                           ],
                         ),
                       ),

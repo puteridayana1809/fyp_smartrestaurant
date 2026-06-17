@@ -9,8 +9,8 @@
   <style>
     :root {
       --primary-yellow: #F5C518;
-      --primary-dark: #1a1a2e;
-      --sidebar-bg: linear-gradient(180deg, #2d5016 0%, #3a6319 100%);
+      --primary-dark: #31572c;
+      --sidebar-bg: linear-gradient(180deg, #35651f 0%, #4f7d2c 100%);
       --card-shadow: 0 4px 20px rgba(0,0,0,0.06);
       --accent-green: #22c55e;
       --accent-red: #ef4444;
@@ -33,7 +33,7 @@
       bottom: 0;
       width: 260px;
       background: var(--sidebar-bg);
-      border-right: 2px solid #4a7c23;
+      border-right: 2px solid rgba(245, 197, 24, 0.35);
       padding: 20px;
       transition: transform 0.3s ease-in-out;
       z-index: 1000;
@@ -52,7 +52,7 @@
     .brand-logo {
       width: 56px;
       height: 56px;
-      background: linear-gradient(135deg, #2d5016 0%, #4a7c23 100%);
+      background: rgba(255, 255, 255, 0.08);
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -76,7 +76,7 @@
     .brand-text .brand-tag {
       display: inline-block;
       background: var(--primary-yellow);
-      color: #000;
+      color: #244315;
       font-size: 0.65rem;
       font-weight: 700;
       padding: 2px 8px;
@@ -89,8 +89,8 @@
       top: 50%;
       left: 260px;
       transform: translateY(-50%);
-      background: var(--primary-dark);
-      color: #fff;
+      background: var(--primary-yellow);
+      color: #244315;
       border: none;
       padding: 12px 8px;
       border-radius: 0 8px 8px 0;
@@ -259,7 +259,7 @@
     }
 
     .card-header-custom {
-      background: var(--primary-dark);
+      background: linear-gradient(135deg, #3d6f25 0%, #5f8d32 100%);
       color: white;
       padding: 16px 20px;
       border-radius: 16px 16px 0 0;
@@ -297,7 +297,7 @@
 
     /* BUTTONS */
     .btn-primary {
-      background: linear-gradient(135deg, var(--primary-dark) 0%, #2d3561 100%);
+      background: linear-gradient(135deg, #31572c 0%, #5f8d32 100%);
       border: none;
       border-radius: 10px;
       padding: 10px 20px;
@@ -305,7 +305,7 @@
     }
 
     .btn-primary:hover {
-      background: linear-gradient(135deg, #2d3561 0%, var(--primary-dark) 100%);
+      background: linear-gradient(135deg, #5f8d32 0%, #31572c 100%);
     }
 
     /* IMAGE PREVIEW */
@@ -382,17 +382,21 @@
       .sidebar-handle { left: 0; }
     }
   </style>
+  <link rel="stylesheet" href="../css/admin-sidebar.css">
 </head>
 <body>
 <!-- SIDEBAR -->
 <div class="sidebar" id="sidebar">
   <div class="sidebar-brand">
-    <div class="brand-logo">
-      <i class="fas fa-utensils"></i>
+    <div class="brand-logo" aria-hidden="true">
+      <svg viewBox="0 0 64 64">
+        <path d="M18 8c1.2 0 2.1.9 2.1 2.1v17.4c0 1 .8 1.8 1.8 1.8h1.2V10.1c0-1.2.9-2.1 2.1-2.1s2.1.9 2.1 2.1v19.2h1.2c1 0 1.8-.8 1.8-1.8V10.1c0-1.2.9-2.1 2.1-2.1s2.1.9 2.1 2.1v18.4c0 5.7-3.8 10.5-9 11.9v14.4c0 1.7-1.4 3.2-3.2 3.2s-3.2-1.4-3.2-3.2V40.4c-5.2-1.4-9-6.2-9-11.9V10.1C15.9 8.9 16.8 8 18 8Z"/>
+        <path d="M48.3 7.8c-7.2 2.3-11.1 8.5-11.1 16.4v13.6c0 1.8 1.5 3.3 3.3 3.3h4.7v13.7c0 1.7 1.4 3.2 3.2 3.2s3.2-1.4 3.2-3.2V10.1c0-1.6-1.6-2.8-3.3-2.3Z"/>
+      </svg>
     </div>
     <div class="brand-text">
-      <h4>BIHUN SUP DAGING<br>SELAMBAK</h4>
-      <span class="brand-tag">VIRAL AYER HITAM</span>
+      <h4>Bihun Sup Daging<br>Selambak</h4>
+      <span class="brand-sub">Staff Portal</span>
     </div>
   </div>
 
