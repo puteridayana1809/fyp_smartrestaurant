@@ -935,6 +935,7 @@
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig, RESTAURANT_ID } from "./js/firebase-config.esm.js";
+import { setupAdminProfile } from "./js/admin-profile.esm.js";
 
   window.addEventListener('DOMContentLoaded', async () => {
 
@@ -1110,6 +1111,7 @@ onAuthStateChanged(auth, async (user) => {
     const email = user.email || user.uid;
     whoami.textContent = email;
     userAvatar.textContent = email.charAt(0).toUpperCase();
+    setupAdminProfile(user);
     initDashboard();
   } else {
     console.warn("⚠️ No user detected — redirecting after 2s...");

@@ -201,7 +201,7 @@
 
   <div class="sidebar-footer">
     <div class="user-info">
-      <div class="user-avatar">A</div>
+      <div class="user-avatar" id="userAvatar">A</div>
       <div class="user-details">
         <div class="name" id="whoami">Loading...</div>
         <div class="role">Admin</div>
@@ -317,6 +317,7 @@
   import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { firebaseConfig, RESTAURANT_ID } from "../js/firebase-config.esm.js";
+  import { setupAdminProfile } from "../js/admin-profile.esm.js";
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
@@ -344,6 +345,7 @@
       return;
     }
     document.getElementById('whoami').textContent = user.email;
+    setupAdminProfile(user);
     await loadStaff();
     await loadAttendance();
     setDefaultDates();

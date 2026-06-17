@@ -170,6 +170,13 @@
   margin-bottom: 14px !important;
   color: #fff !important;
   text-align: left !important;
+  cursor: pointer !important;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.user-info:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+  transform: translateY(-1px);
 }
 
 .user-avatar {
@@ -203,6 +210,33 @@
   color: rgba(255, 255, 255, 0.78) !important;
   font-size: 0.82rem !important;
   font-weight: 700 !important;
+}
+
+.profile-edit-action {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.profile-edit-action:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.admin-profile-modal .modal-header {
+  background: linear-gradient(135deg, #35651f, #4f7d2c);
+  color: #fff;
+}
+
+.admin-profile-modal .btn-close {
+  filter: brightness(0) invert(1);
 }
 
 .sidebar .btn-danger {

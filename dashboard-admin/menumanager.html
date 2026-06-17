@@ -630,6 +630,7 @@
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
   import { firebaseConfig, RESTAURANT_ID } from "../js/firebase-config.esm.js";
+  import { setupAdminProfile } from "../js/admin-profile.esm.js";
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
@@ -914,6 +915,7 @@
     
     document.getElementById('whoami').textContent = user.email || "—";
     document.getElementById('userAvatar').textContent = (user.email || "A")[0].toUpperCase();
+    setupAdminProfile(user);
 
     const roleSnap = await getDoc(doc(db, "roles", user.uid));
     if (roleSnap.exists() && roleSnap.data().role === "admin") {
