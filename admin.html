@@ -379,13 +379,22 @@
     }
 
     .kpi-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 10px;
+      width: 100px;
+      height: 100px;
+      border-radius: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.1rem;
+      background: transparent !important;
+      color: inherit !important;
+      flex: 0 0 100px;
+    }
+
+    .kpi-icon img {
+      width: 100px;
+      height: 100px;
+      object-fit: contain;
+      display: block;
     }
 
     .kpi-icon.green { background: rgba(34, 197, 94, 0.15); color: var(--accent-green); }
@@ -759,7 +768,7 @@
     <div class="kpi-card highlight">
       <div class="kpi-header">
         <span class="kpi-label">Daily Sales</span>
-        <div class="kpi-icon yellow"><i class="fas fa-chart-line"></i></div>
+        <div class="kpi-icon yellow"><img src="assets/images/iconsales.png" alt=""></div>
       </div>
       <div class="kpi-value currency" id="kpiTotalSales">0.00</div>
       <div class="kpi-change" id="salesChange">Calculating...</div>
@@ -768,7 +777,7 @@
     <div class="kpi-card">
       <div class="kpi-header">
         <span class="kpi-label">Bowls Served</span>
-        <div class="kpi-icon green"><i class="fas fa-bowl-food"></i></div>
+        <div class="kpi-icon green"><img src="assets/images/iconbowlspng.png" alt=""></div>
       </div>
       <div class="kpi-value" id="kpiOrders">0</div>
       <div class="kpi-change" id="ordersSubtext">orders completed</div>
@@ -777,7 +786,7 @@
     <div class="kpi-card">
       <div class="kpi-header">
         <span class="kpi-label">Average Ticket</span>
-        <div class="kpi-icon blue"><i class="fas fa-receipt"></i></div>
+        <div class="kpi-icon blue"><img src="assets/images/iconavgticket.png" alt=""></div>
       </div>
       <div class="kpi-value currency" id="kpiAvg">0.00</div>
       <div class="kpi-change">per transaction</div>
@@ -786,7 +795,7 @@
     <div class="kpi-card">
       <div class="kpi-header">
         <span class="kpi-label">Active Tables</span>
-        <div class="kpi-icon orange"><i class="fas fa-utensils"></i></div>
+        <div class="kpi-icon orange"><img src="assets/images/iconactivetables.png" alt=""></div>
       </div>
       <div class="kpi-value" id="kpiActiveTables">0 / 0</div>
       <div class="kpi-change" id="tableStatus">Loading...</div>
@@ -795,7 +804,7 @@
     <div class="kpi-card">
       <div class="kpi-header">
         <span class="kpi-label">Payment Split</span>
-        <div class="kpi-icon green"><i class="fas fa-wallet"></i></div>
+        <div class="kpi-icon green"><img src="assets/images/iconsplitbill.png" alt=""></div>
       </div>
       <div class="kpi-payment-split">
         <span class="payment-badge cash" id="kpiCash">Cash RM 0</span>
@@ -807,7 +816,7 @@
     <div class="kpi-card">
       <div class="kpi-header">
         <span class="kpi-label">Actual Cash</span>
-        <div class="kpi-icon green"><i class="fas fa-cash-register"></i></div>
+        <div class="kpi-icon green"><img src="assets/images/iconactualcash.png" alt=""></div>
       </div>
       <div class="kpi-value currency text-success" id="kpiActualCash">0.00</div>
       <div class="kpi-change">Opening: RM <span id="kpiOpening">0.00</span></div>
