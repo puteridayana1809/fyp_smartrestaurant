@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>KDS — Simple</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <style>
+    :root {
+      --ink:#222; --muted:#6b7280; --line:#e5e7eb;
+      --bg:#fbfbfc; --card:#fff;
+    }
+    body { background:var(--bg); color:var(--ink); }
+    .toolbar { position:sticky; top:0; z-index:20; background:var(--bg); border-bottom:1px solid var(--line); }
+    .pill { border:1px solid var(--line); background:#fff; border-radius:999px; padding:.35rem .8rem; font-weight:600; }
+    .pill.active { background:#111; color:#fff; }
+    .pill:focus { outline: none; box-shadow: none; }
+    .card-order .table-title .text-muted {
+  font-size: 0.75rem;
+  word-break: break-all;
+}
+   .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:16px; }
+    .card-order { background:var(--card); border:1px solid var(--line); border-radius:16px; }
+    .card-header { padding:12px 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); cursor:pointer; }
+    .table-title { font-weight:800; letter-spacing:.4px; }
+    .age { font-weight:800; padding:.2rem .55rem; border-radius:999px; font-size:.85rem; }
+    .age.g { background:#DCFCE7; color:#166534; }
+    .age.y { background:#FEF9C3; color:#92400E; }
+    .age.r { background:#FEE2E2; color:#991B1B; }
+    .list-group-item { border-color:var(--line) !important; }
+    .item-note { color:var(--muted); font-size:.85rem; }
+    .done { text-decoration:line-through; opacity:.6; }
+    .card-header.disabled,
+    .order-notes {
+  font-size: .85rem;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+
+.list-group-item.disabled {
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+.card-header:not(.disabled) { cursor: pointer; }
+    .empty { color:var(--muted); text-align:center; padding:60px 0; }
+  </style>
+</head>
+<body class="p-3 p-md-4">
+
+  <!-- Toolbar -->
+  <div class="toolbar py-2 mb-3">
+    <div class="container-fluid d-flex flex-wrap align-items-center gap-2">
+      <h4 class="m-0 fw-bold">Kitchen Display</h4>
+<span id="roleBadge" class="badge bg-warning text-dark ms-2 d-none">Read-Only (Admin)</span>
+      <div class="ms-auto d-flex flex-wrap align-items-center gap-2">
+        <!-- Section -->
+        <div class="btn-group" role="group" aria-label="section">
+          <button id="btnAll"   class="pill active">All</button>
+          <button id="btnSup"   class="pill">Sup</button>
+          <button id="btnDrinks"   class="pill">Drinks</button>
+          <button id="btnGoreng" class="pill">Goreng</button>
+        </div>
+
+        <!-- View -->
+        <div class="btn-group ms-2" role="group" aria-label="view">
+          <button id="btnActive"  class="pill active">Active</button>
+          <button id="btnHistory" class="pill">History</button>
+        </div>
+
+        <!-- Date -->
+        <input id="datePicker" type="date" class="form-control ms-2" style="width:200px">
+          <!--logout-->
+  <button id="logoutBtn" class="btn btn-danger ms-2">Log Out</button>
+      </div>
+    </div>
+  </div>
+  <audio id="newOrderSound" src="./neworder.mp3" preload="auto"></audio>
+<button id="soundBtn" class="pill" title="Enable/disable sound">🔕 Sound off</button>
+
+  <div class="container-fluid">
+    <div id="ordersGrid" class="grid"></div>
+    <div id="emptyState" class="empty d-none">No orders to show.</div>
+  </div>
+
+
+
+
+  <!-- Firebase + App -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import {
+      getFirestore, collection, query, where, orderBy, onSnapshot,
+      doc, getDoc, updateDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // ---- Firebase config (imported from module) ----
+    import { firebaseConfig, RESTAURANT_ID as restaurantId } from "./js/firebase-config.esm.js";
+    
+
+    const app  = initializeApp(firebaseConfig);
+    const db   = getFirestore(app);
+    const auth = getAuth(app);
+
+    // ---- Paths ----
+    const rcol = (name)     => collection(db, `restaurants/${restaurantId}/${name}`);
+    const rdoc = (name, id) => doc(db, `restaurants/${restaurantId}/${name}`, String(id));
+
+    // ---- DOM ----
+    const ordersGrid = document.getElementById('ordersGrid');
+    const emptyState = document.getElementById('emptyState');
+    const datePicker = document.getElementById('datePicker');
+    const btnAll    = document.getElementById('btnAll');
+    const btnSup    = document.getElementById('btnSup');
+    const btnGoreng = document.getElementById('btnGoreng');
+    const btnActive = document.getElementById('btnActive');
+    const btnHistory= document.getElementById('btnHistory');
+    const btnDrinks = document.getElementById('btnDrinks');
+
+
+    // ---- Section/View state ----
+    let section = "";             // "", "sup", "goreng"
+    let view    = "active";       // "active" | "history"
+    let unsub   = null;
+
+    const localNotesMap = {};
+
+// --- Sound (single implementation) ---
+const soundBtn = document.getElementById('soundBtn');
+const newOrderSound = document.getElementById('newOrderSound');
+let soundEnabled = false;
+
+function playNewOrderSound() {
+  if (!soundEnabled) return;
+  try {
+    newOrderSound.currentTime = 0;
+    newOrderSound.play();
+  } catch (err) {
+    console.warn('Audio play blocked:', err);
+  }
+}
+
+soundBtn.addEventListener('click', () => {
+  soundEnabled = !soundEnabled;
+  soundBtn.classList.toggle('active', soundEnabled);
+  soundBtn.textContent = soundEnabled ? '🔔 Sound on' : '🔕 Sound off';
+
+  // Nudge the browser to allow audio after this user gesture
+  if (soundEnabled) {
+    newOrderSound.play().catch(() => {/* ignore, some browsers need first real event */});
+    newOrderSound.pause();
+    newOrderSound.currentTime = 0;
+  }
+});
+
+// short pleasant "ding" (1–3 beeps) — lightweight, no files needed
+function ding(times = 1, gapMs = 250) {
+  if (!soundEnabled || !audioCtx) return;
+  const now = audioCtx.currentTime;
+  for (let i = 0; i < times; i++) {
+    const start = now + i * (gapMs / 1000);
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(880, start); // A5
+    o.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(0.15, start + 0.01);
+    o.start(start);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + 0.35);
+    o.stop(start + 0.4);
+  }
+}
+
+
+
+    // Simple helpers
+    const startOfDay = (d) => { const x=new Date(d); x.setHours(0,0,0,0); return x; };
+    const endOfDay   = (d) => { const x=new Date(d); x.setHours(23,59,59,999); return x; };
+    const toRM = (n) => (Math.round((Number(n)||0)*100)/100).toFixed(2);
+    function minsSince(ts){
+      const now = Date.now();
+      const t = ts?.toDate ? ts.toDate().getTime() : (ts instanceof Date ? ts.getTime() : new Date(ts).getTime());
+      return Math.max(0, Math.round((now - t)/60000));
+    }
+    const ageClass = (m)=> m<=7 ? "g" : (m<=10 ? "y" : "r");
+
+    // Drinks map to Sup
+function inferSection(item) {
+  const raw =
+    (item.section || item.station || item.category || "")
+      .toString()
+      .toLowerCase();
+  const name = (item.name || "").toLowerCase();
+
+  const drinkKW = [
+    "teh","milo","kopi","nescafe","neslo","sirap","limau","joss","extra joss",
+    "air","air panas","air suam","air kosong","bandung","horlicks","coklat","chocolate",
+    "3 layer","mocha","drink","ais","o ais","bersusu","lemon","tapai"
+  ];
+
+  // map your categories/aliases
+  if (raw.startsWith("goreng")) return "goreng";       // matches goreng, goreng2, etc.
+  if (raw === "sup") return "sup";
+  if (raw === "drink" || raw === "drinking" || raw === "minuman") return "drinks";
+
+  if (name.includes("goreng")) return "goreng";
+  if (name.includes("sup")) return "sup";
+  if (drinkKW.some(k => name.includes(k))) return "drinks";
+
+  return "sup";
+}
+
+
+
+let userRole = "";
+let roleReady = false;
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return goLogin("Please sign in first.");
+
+  const roleSnap = await getDoc(doc(db, "roles", user.uid));
+  userRole = roleSnap.data()?.role || "unknown";
+  roleReady = true;
+
+  console.log("🧑 Logged in user:", user.email);
+  console.log("🔑 Role:", userRole);
+
+  if (userRole === "admin") {
+    console.log("🟡 Admin detected — Read-Only mode enabled");
+    document.getElementById("roleBadge").classList.remove("d-none");
+  }
+
+  // ✅ Tunggu sekejap supaya Firestore betul-betul stabil
+  setTimeout(() => {
+    init();
+  }, 500);
+});
+
+
+
+
+    
+    // ---- Listener ----
+let initialLoadDone = false;
+
+function listen() {
+  if (typeof unsub === "function") unsub();
+  initialLoadDone = false; // prevent ding on first page of results
+
+  const d = new Date(datePicker.value + "T00:00:00");
+  const sortDir = (view === "history") ? "desc" : "asc";
+  const qy = query(
+    rcol("orders"),
+    where("createdAt", ">=", startOfDay(d)),
+    where("createdAt", "<=", endOfDay(d)),
+    orderBy("createdAt", sortDir)
+  );
+
+  unsub = onSnapshot(qy, (snap) => {
+    // ---------- 🔔 detect only truly new orders ----------
+    const justAdded = [];
+    snap.docChanges().forEach(ch => {
+      if (ch.type === "added") {
+        // Optional: filter to current section only
+        // if (section) {
+        //   const o = ch.doc.data();
+        //   const hasForSection = (o.items||[]).some(it => inferSection(it) === section);
+        //   if (hasForSection) justAdded.push(ch.doc);
+        // } else {
+        //   justAdded.push(ch.doc);
+        // }
+        justAdded.push(ch.doc);
+      }
+    });
+if (initialLoadDone && justAdded.length && view === "active") {
+  playNewOrderSound();
+  // 🔄 Reset flag after it reappears
+justAdded.forEach(async d => {
+  setTimeout(async () => {
+    const ref = rdoc("orders", d.id);
+    await updateDoc(ref, { isReopened: false });
+  }, 3000); // tunggu 3 saat sebelum reset
+});
+
+}
+
+    if (!initialLoadDone) initialLoadDone = true;
+
+    // ---------- render ----------
+
+const canInteract = section !== "" && view === "active" && userRole !== "admin";
+    const parts = [];
+    snap.forEach(docSnap => {
+      const o = docSnap.data();
+
+   const isCompleted = String(o.status||"").toLowerCase() === "completed";
+const supDone     = Boolean(o.kds?.sup?.done);
+const drinksDone  = Boolean(o.kds?.drinks?.done);
+const gorengDone  = Boolean(o.kds?.goreng?.done);
+const allThreeDone = supDone && drinksDone && gorengDone;
+ const hasNewItems = (o.items || []).some(it => {
+    const sec = inferSection(it);
+    return !it.kds?.[sec];
+  });
+
+    const newBadge = hasNewItems ? `<span class="badge bg-primary ms-2">🆕 New Order</span>` : "";
+
+
+if (view === "active") {
+  if (isCompleted) return;
+  if (section === "sup"     && supDone)    return;
+  if (section === "drinks"  && drinksDone) return;
+  if (section === "goreng"  && gorengDone) return;
+  if (!section && allThreeDone) return;
+} else {
+  if (section === "sup"     && !supDone     && !isCompleted) return;
+  if (section === "drinks"  && !drinksDone  && !isCompleted) return;
+  if (section === "goreng"  && !gorengDone  && !isCompleted) return;
+  if (!section && !isCompleted && !allThreeDone) return;
+}
+
+
+      const items = (o.items||[]).map((it,idx)=>({...it,_idx:idx}));
+      const rel = items.filter(it => {
+        const s = inferSection(it);
+        return section ? s === section : true;
+      });
+      if (!rel.length) return;
+
+let lastBatch = null;
+const itemLis = rel.map((it, idx) => {
+  const secKey = section || inferSection(it) || "any";
+  const done   = Boolean(it.kds?.[secKey]);
+  const attrs  = canInteract
+    ? `data-action="toggle" data-order="${docSnap.id}" data-index="${it._idx}" data-sec="${secKey}"`
+    : '';
+  const liCls  = `list-group-item d-flex justify-content-between align-items-start ${done ? 'done' : ''} ${canInteract ? '' : 'disabled'}`;
+
+  let divider = "";
+  if (it.batch && it.batch !== lastBatch) {
+    divider = `<li class="list-group-item text-center text-muted fw-bold">—— Tambah Order ——</li>`;
+    lastBatch = it.batch;
+  }
+
+  return `
+    ${divider}
+    <li class="${liCls}" ${attrs}>
+      <div>
+        <div class="fw-semibold">${it.qty || 1}× ${it.name || '-'}</div>
+        ${it.note ? `<div class="item-note">📝 ${it.note}</div>` : ""}
+      </div>
+    </li>`;
+}).join("");
+
+
+
+
+      // timing pill (frozen in History)
+      const created = o.createdAt || o.timestamp;
+      const createdDate = created?.toDate ? created.toDate() : new Date(created);
+      const createdMs = createdDate.getTime();
+
+      let doneDate = null;
+      if (view === "history") {
+        if (section === "sup")       doneDate = o.kds?.sup?.doneAt || o.completedAt;
+        else if (section === "drinks") doneDate = o.kds?.drinks?.doneAt || o.completedAt;
+        else if (section === "goreng") doneDate = o.kds?.goreng?.doneAt || o.completedAt;
+        else if (o.completedAt)        doneDate = o.completedAt;
+        else if (o.kds?.sup?.doneAt || o.kds?.goreng?.doneAt) {
+          const supT = o.kds?.sup?.doneAt ? (o.kds.sup.doneAt.toDate ? o.kds.sup.doneAt.toDate() : new Date(o.kds.sup.doneAt)) : null;
+          const gorT = o.kds?.goreng?.doneAt ? (o.kds.goreng.doneAt.toDate ? o.kds.goreng.doneAt.toDate() : new Date(o.kds.goreng.doneAt)) : null;
+          const latest = Math.max(supT ? supT.getTime() : 0, gorT ? gorT.getTime() : 0);
+          doneDate = latest ? new Date(latest) : null;
+        }
+      }
+      const doneMs =
+        doneDate ? (doneDate.toDate ? doneDate.toDate().getTime() : new Date(doneDate).getTime()) : null;
+
+      let min;
+      let ageDataTsAttr = "";
+      if (view === "history" && doneMs) {
+        min = Math.max(0, Math.floor((doneMs - createdMs) / 60000)); // frozen
+      } else {
+        min = Math.max(0, Math.floor((Date.now() - createdMs) / 60000)); // live
+        ageDataTsAttr = `data-ts="${createdMs}"`;
+      }
+
+const tableLabel = o.table || (o.tableNumber ? `T${o.tableNumber}` : "-");
+      const totalRM = toRM((o.items||[]).reduce((s,it)=>s + (Number(it.unitPrice)||0)*(Number(it.qty)||0),0));
+
+// decide header behavior
+
+const headerAttrs = (view === "history")
+  ? `data-action="reopen" data-order="${docSnap.id}" ${section ? `data-sec="${section}"` : ""}`
+  : (section !== "" && view === "active")
+      ? `data-action="sectionDone" data-order="${docSnap.id}" data-sec="${section}"`
+      : "";
+
+const headerCls = `card-header ${headerAttrs ? '' : 'disabled'}`;
+
+
+
+parts.push(`
+  <div class="card-order">
+    <div class="${headerCls}" ${headerAttrs}>
+      <div class="table-title">
+        ${tableLabel} ${newBadge}
+        <div class="small text-muted">🆔 ${docSnap.id}</div>
+      </div>
+      <span class="age ${ageClass(min)}" ${ageDataTsAttr}>${min} min</span>
+    </div>
+
+
+    <div class="px-3 py-1">
+      <textarea class="form-control form-control-sm order-notes-temp"
+        placeholder="Notes (local only)"
+        data-order="${docSnap.id}"
+        rows="1"
+      >${localNotesMap[docSnap.id] || ""}</textarea>
+    </div>
+
+    <ul class="list-group list-group-flush">
+      ${itemLis}
+    </ul>
+    <div class="p-2 px-3 small text-muted d-flex justify-content-between">
+      <div>${createdDate.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+      <div>RM ${totalRM}</div>
+    </div>
+  </div>
+`);
+
+
+    });
+
+    ordersGrid.innerHTML = parts.join("");
+    emptyState.classList.toggle('d-none', parts.length > 0);
+    refreshAges(); // update live pills
+  });
+}
+
+function refreshAges() {
+  const now = Date.now();
+  document.querySelectorAll('.card-order .age').forEach(el => {
+    const t = Number(el.dataset.ts);
+    if (!t) return;
+    const mins = Math.max(0, Math.floor((now - t) / 60000));
+    el.textContent = `${mins} min`;
+    el.classList.remove('g','y','r');
+    el.classList.add(ageClass(mins));
+  });
+}
+
+// run periodically and when tab becomes visible
+setInterval(refreshAges, 15000);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') refreshAges();
+});
+    // ---- Click handlers ----
+    ordersGrid.addEventListener('input', (e) => {
+        if (userRole === "admin") return; // 🚫 Prevent typing in read-only mode
+  const ta = e.target.closest('.order-notes-temp');
+  if (!ta) return;
+  const id = ta.getAttribute('data-order');
+  localNotesMap[id] = ta.value;
+});
+
+
+    ordersGrid.addEventListener('click', async (e)=>{
+        // 🚫 If admin (read-only mode), block all interactions
+  if (userRole === "admin") {
+    console.warn("⛔ Read-only mode: clicks disabled for admin.");
+    return;
+  }
+
+      const itemEl = e.target.closest('[data-action="toggle"]');
+      const headEl = e.target.closest('[data-action="sectionDone"]');
+
+      // Toggle single item
+      if (itemEl) {
+        const orderId = itemEl.getAttribute('data-order');
+        const idx     = Number(itemEl.getAttribute('data-index'));
+        const secKey  = (itemEl.getAttribute('data-sec')||"").toLowerCase();
+
+        try {
+          const ref  = rdoc("orders", orderId);
+          const snap = await getDoc(ref);
+          if (!snap.exists()) return;
+
+          const data  = snap.data();
+          const items = JSON.parse(JSON.stringify(data.items||[]));
+          const pick  = section || secKey || "any";
+
+          items[idx].kds = items[idx].kds || {};
+          items[idx].kds[pick] = !Boolean(items[idx].kds[pick]);
+
+          // recompute section done
+          const rel = items.filter(it=>{
+            const s = inferSection(it);
+            if (!pick || pick==="any") return true;
+            if (!s) return true;
+            return s===pick;
+          });
+          const allDone = rel.length>0 && rel.every(it=>Boolean(it.kds?.[pick]));
+          const kds = data.kds || {};
+          kds[pick] = kds[pick] || {};
+          kds[pick].done   = allDone || false;
+          kds[pick].doneAt = allDone ? serverTimestamp() : null;
+
+          const newStatus = (String(data.status).toLowerCase() === "completed")
+  ? "completed"
+  : "preparing";
+
+await updateDoc(ref, { items, kds, updatedAt: serverTimestamp() });
+        } catch(err){ console.error(err); alert("Update failed: "+err.message); }
+        return;
+      }
+
+      // Mark whole section done
+   // Mark whole section done OR revert if already completed
+if (headEl) {
+  const orderId = headEl.getAttribute('data-order');
+
+  try {
+    const ref  = rdoc("orders", orderId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+
+    const data  = snap.data();
+    const items = JSON.parse(JSON.stringify(data.items||[]));
+const selected = (headEl.getAttribute('data-sec') || "").toLowerCase();
+console.log("Section clicked:", selected);
+
+    // ✅ REVERT if already completed
+    const isCompleted = String(data.status||"").toLowerCase() === "completed";
+    if (isCompleted) {
+      await updateDoc(ref, {             // revert status
+        completedAt: null,               // optional cleanup
+        payment: null,                   // optional cleanup
+        updatedAt: serverTimestamp()
+      });
+      alert("Order has been reverted to active.");
+      return;
+    }
+
+    // Proceed with section marking
+const present = new Set();
+items.forEach(it=>{
+  const s = inferSection(it);
+  if (s==="sup" || s==="drinks" || s==="goreng") present.add(s); 
+});
+
+const targetSections = 
+  (selected === "sup" || selected === "drinks" || selected === "goreng")
+    ? [selected]
+    : (present.size > 0 ? Array.from(present) : ["sup", "drinks", "goreng"]);
+
+    targetSections.forEach(sec=>{
+      items.forEach(it=>{
+        const s = inferSection(it);
+        if (!s || s===sec) {
+          it.kds = it.kds || {};
+          it.kds[sec] = true;
+        }
+      });
+    });
+
+    const kds = data.kds || {};
+    targetSections.forEach(sec=>{
+      kds[sec] = kds[sec] || {};
+      kds[sec].done   = true;
+      kds[sec].doneAt = serverTimestamp();
+    });
+
+    console.log("Updating order:", {
+  orderId,
+  payload: {
+    items,
+    kds,
+    updatedAt: serverTimestamp()
+  }
+});
+
+
+const newStatus = (String(data.status).toLowerCase() === "completed")
+  ? "completed"
+  : "preparing";
+
+await updateDoc(ref, { items, kds, updatedAt: serverTimestamp() });
+
+  } catch(err) {
+    console.error(err);
+    alert("Update failed: " + err.message);
+  }
+}
+const reopenEl = e.target.closest('[data-action="reopen"]');
+if (reopenEl) {
+  const orderId = reopenEl.getAttribute('data-order');
+  const selectedSec = (reopenEl.getAttribute('data-sec') || '').toLowerCase();
+  const sectionsToReopen =
+    (selectedSec === 'sup' || selectedSec === 'drinks' || selectedSec === 'goreng')
+      ? [selectedSec]
+      : ['sup', 'drinks', 'goreng'];
+
+  try {
+    const ref = rdoc("orders", orderId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+
+    const data = snap.data();
+    const items = JSON.parse(JSON.stringify(data.items || []));
+    const kds = JSON.parse(JSON.stringify(data.kds || {}));
+
+    // ✅ Only reset section-level done flags, not items that are already done
+    sectionsToReopen.forEach(sec => {
+      if (kds[sec]) {
+        kds[sec].done = false;
+        kds[sec].doneAt = null;
+      }
+    });
+
+    // ✅ Only mark new (not done) items as false — keep old done ones as true
+    items.forEach(it => {
+      const sec = inferSection(it);
+      if (!sec) return;
+
+      it.kds = it.kds || {};
+      if (sectionsToReopen.includes(sec)) {
+        // Kalau item memang dah siap, jangan ubah
+        if (it.kds[sec] !== true) {
+          it.kds[sec] = false;
+        }
+      }
+    });
+
+    // ✅ Update Firestore — flag isReopened supaya KDS tunjuk divider sebentar
+    const updates = {
+      items,
+      kds,
+      completedAt: null,
+      payment: null,
+      status: "active",
+      updatedAt: serverTimestamp(),
+      isReopened: true
+    };
+
+    await updateDoc(ref, updates);
+
+    // ✅ Tukar view ke Active supaya auto-refresh
+    setView("active");
+
+  } catch (err) {
+    console.error(err);
+    alert("Failed to reopen: " + err.message);
+  }
+  return;
+}
+
+
+    });
+
+    // ---- Controls ----
+function setSection(val){
+  section = val;   // "", "sup", "drinks", "goreng"
+  [btnAll, btnSup, btnDrinks, btnGoreng].forEach(b => b.classList.remove('active'));
+  if (val==="") btnAll.classList.add('active');
+  else if (val==="sup") btnSup.classList.add('active');
+  else if (val==="drinks") btnDrinks.classList.add('active');
+  else if (val==="goreng") btnGoreng.classList.add('active');
+  listen();
+}
+const logoutBtn = document.getElementById('logoutBtn');
+logoutBtn.addEventListener('click', async () => {
+  try {
+    await signOut(auth);
+    window.location.href = "index.html"; // redirect to login page
+  } catch (err) {
+    console.error("Logout failed:", err);
+    alert("Failed to log out: " + err.message);
+  }
+});
+
+
+    function setView(val){
+      view = val;                 // "active" | "history"
+      [btnActive, btnHistory].forEach(b=>b.classList.remove('active'));
+      (val==="active" ? btnActive : btnHistory).classList.add('active');
+      listen();
+    }
+
+    btnAll.addEventListener('click',    ()=>setSection(""));
+    btnSup.addEventListener('click',    ()=>setSection("sup"));
+    btnGoreng.addEventListener('click', ()=>setSection("goreng"));
+    btnActive.addEventListener('click', ()=>setView("active"));
+    btnDrinks.addEventListener('click', ()=>setSection("drinks"));
+    btnHistory.addEventListener('click',()=>setView("history"));
+    datePicker.addEventListener('change', listen);
+
+    // ---- Init ----
+async function init() {
+  // Tunggu roleReady dulu
+  if (!roleReady) {
+    console.warn("⏳ Waiting for role assignment...");
+    setTimeout(init, 200);
+    return;
+  }
+
+  const now = new Date();
+  datePicker.value = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 10);
+
+  listen(); // start listener bila role dah confirm
+}
+
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

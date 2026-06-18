@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Kedai Makan - Order Page</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Firebase (auth + firestore) + guard -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc,setDoc, collection, addDoc, serverTimestamp,
+    query, orderBy, onSnapshot, updateDoc,runTransaction
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    import { firebaseConfig, RESTAURANT_ID as restaurantId } from "./js/firebase-config.esm.js";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db   = getFirestore(app);
+
+    // Expose for non-module script below (cart + submit still use these)
+    window.db = db;
+    window.addDoc = addDoc;
+    window.collection = collection;
+    window.serverTimestamp = serverTimestamp;
+    window.getDoc = getDoc;
+    window.setDoc = setDoc;
+    window.doc = doc;
+    window.updateDoc = updateDoc;
+    window.runTransaction=runTransaction;
+    window.restaurantId = restaurantId;
+
+    window.selectedTableId = null;       
+    window.selectedTableNumber = null;
+    // keep this near your globals
+    window.selectedTable = null;
+
+
+
+    function goLogin(msg) {
+      if (msg) alert(msg);
+      window.location.href = "index.html";
+    }
+
+
+
+    // ✅ Auth + Role guard: only allow "waiter"
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return goLogin("Please sign in first.");
+
+      try {
+        const snap = await getDoc(doc(db, "roles", user.uid));
+        if (!snap.exists()) {
+          await signOut(auth);
+          return goLogin("No role assigned. Ask admin to set your role.");
+        }
+        const role = String(snap.data().role || "").toLowerCase();
+        if (role !== "waiter") {
+          await signOut(auth);
+          return goLogin("Access denied. This page is for WAITERS only.");
+        }
+        // Waiter verified — page can continue normally
+      } catch (e) {
+        console.error("Role check failed:", e);
+        await signOut(auth);
+        goLogin("Error verifying role: " + (e.code || e.message));
+      }
+    });
+
+    // 🔴 Logout
+    document.getElementById("logoutBtn")?.addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+        window.location.href = "index.html";
+      } catch (err) {
+        alert("Error logging out: " + err.message);
+      }
+    });
+
+   window.addEventListener("DOMContentLoaded", () => {
+    // ===== TABLES =====
+    const tableContainer = document.getElementById("tableButtons");
+    if (!tableContainer) return console.error("❌ #tableButtons not found in DOM");
+
+// add near top
+let selectedTableId = null;        // Firestore doc id
+let selectedTableNumber = null;    // display number
+
+function isBungkusDoc(t){
+  return t?.type === 'bungkus'
+      || /^bungkus[- ]?\d+$/i.test(String(t?.id || ''))
+      || /^B\d+$/i.test(String(t?.name || ''));
+}
+
+function sortTablesNatural(list){
+  function key(t){
+    if (isBungkusDoc(t)) return [0, 0, (t.name||t.id||'').toUpperCase()];
+    // T1..Tn, then plain numbers, then others
+    const label = String(t.name || (t.number!=null?`T${t.number}`:''));
+    const mT = /^T(\d+)$/i.exec(label);
+    const mN = /^(\d+)$/.exec(label);
+    if (mT) return [1, parseInt(mT[1],10), label.toUpperCase()];
+    if (mN) return [2, parseInt(mN[1],10), label.toUpperCase()];
+    return [3, 0, label.toUpperCase()];
+  }
+  return [...list].sort((a,b)=>{const A=key(a),B=key(b);return A[0]-B[0]||A[1]-B[1]||A[2].localeCompare(B[2]);});
+}
+
+
+
+function renderTables(tables) {
+  tableContainer.innerHTML = "";
+
+// Get everything Admin configured in /tables and render in one pass
+const all = sortTablesNatural(tables);
+
+all.forEach((t, i) => {
+ const hasOrder = !!t.activeOrderId;           // red if ANY active ticket, green otherwise
+
+const btn = document.createElement('button');
+btn.className = 'btn ' + (hasOrder ? 'btn-danger' : 'btn-success');
+
+
+const isB = (t.type === 'bungkus')
+         || /^B(ungkus)?\s*\d+$/i.test(String(t.name || ''))
+         || /^B\d+$/i.test(String(t.id || '')); 
+
+  // label fallbacks:
+const label = t.name || (isB ? (t.name || String(t.id)) : (t.number != null ? `T${t.number}` : String(t.id)));
+
+
+  btn.textContent = label;
+
+btn.onclick = () => {
+  document.querySelectorAll('#tableButtons button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+
+  window.selectedTable       = t;
+  window.selectedTableId     = t.id;
+  window.selectedTableNumber = isB ? null : t.number;
+  window.selectedTableLabel  = label;
+
+  document.getElementById('tableNumber').value = isB ? label : (t.number ?? '');
+  
+  // Update selected table label in header
+  const labelEl = document.getElementById('selectedTableLabel');
+  if (labelEl) labelEl.innerText = `— ${label}`;
+  
+  // Collapse table section
+  const content = document.getElementById('tableSectionContent');
+  const toggle = document.querySelector('.section-toggle');
+  if (content && toggle) {
+    content.classList.add('collapsed');
+    toggle.classList.add('collapsed');
+  }
+  
+  // Auto scroll to menu section
+  setTimeout(() => {
+    const menuSection = document.querySelector('.menu-section');
+    if (menuSection) {
+      menuSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, 100);
+};
+
+  tableContainer.appendChild(btn);
+});
+
+
+
+}
+
+
+
+
+    const tablesQ = query(collection(db, `restaurants/${restaurantId}/tables`), orderBy("number"));
+    onSnapshot(
+      tablesQ,
+      snap => {
+        console.log("📥 tables docs:", snap.size);
+        const tables = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+        renderTables(tables);
+      },
+      err => {
+        console.error("❌ tables onSnapshot error:", err);
+        alert("Tables read error: " + err.code);
+      }
+    );
+
+
+
+
+
+    // ===== MENU =====
+    const menuContainer = document.getElementById("menuContainer");
+    if (!menuContainer) return console.error("❌ #menuContainer not found in DOM");
+
+    const categoryFiltersDiv = document.getElementById("categoryFilters");
+    let currentCategoryFilter = 'sup'; // Default to sup
+    let allCategories = [];
+    let allMenuItems = [];
+
+    function formatRM(v){ return v==null ? "-" : "RM " + Number(v).toFixed(2); }
+
+    // Render category filter buttons - show ALL categories from database
+    function renderCategoryFilters(categories) {
+      if (!categories || categories.length === 0) return;
+      
+      console.log("🔍 All categories from Firebase:", categories);
+      
+      const categoryIcons = {
+        'minuman': 'fa-glass-water',
+        'goreng': 'fa-fire-burner',
+        'sup': 'fa-bowl-food'
+      };
+
+      const categoryNames = {
+        'minuman': 'Minuman',
+        'goreng': 'Goreng',
+        'sup': 'Sup'
+      };
+
+      // Always show these 3 buttons in order
+      const orderedCats = ['sup', 'goreng', 'minuman'];
+      let html = '';
+
+      orderedCats.forEach(catId => {
+        const icon = categoryIcons[catId] || 'fa-utensils';
+        const name = categoryNames[catId] || catId;
+        
+        html += `<button class="cat-filter-btn ${currentCategoryFilter === catId ? 'active' : ''}" data-category="${catId}">
+          <i class="fas ${icon}"></i> ${name}
+        </button>`;
+      });
+
+      categoryFiltersDiv.innerHTML = html;
+
+      // Add click handlers
+      categoryFiltersDiv.querySelectorAll('.cat-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentCategoryFilter = btn.dataset.category;
+          categoryFiltersDiv.querySelectorAll('.cat-filter-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          renderFilteredMenu();
+        });
+      });
+    }
+
+    // Render filtered menu based on selected category
+    function renderFilteredMenu() {
+      if (!allCategories.length || !currentCategoryFilter) return;
+      
+      const filteredCategories = allCategories.filter(c => c.categoryId === currentCategoryFilter);
+      const filteredItems = allMenuItems.filter(it => it.categoryId === currentCategoryFilter);
+      renderMenuByCategory(filteredCategories, filteredItems);
+    }
+
+    function renderMenuByCategory(categories, items) {
+      console.log("📊 rendering | cats:", categories.length, "items:", items.length);
+      menuContainer.innerHTML = "";
+      const catMap = new Map(categories.map(c => [c.categoryId, c]));
+      const grouped = {};
+      items.forEach(it => { (grouped[it.categoryId] ||= []).push(it); });
+
+      Object.keys(grouped)
+        .sort((a,b) => (catMap.get(a)?.sort||99)-(catMap.get(b)?.sort||99))
+        .forEach(cid => {
+          const cat = catMap.get(cid);
+          const title = cat?.name || cid;
+          const accId = `acc_${cid}`;
+          const bodyId = `body_${cid}`;
+
+          const section = document.createElement("div");
+          section.className = "accordion-item";
+          section.id = accId;
+          // Auto-expand accordion when showing specific category
+          section.innerHTML = `
+            <div>
+              <button class="accordion-button" data-bs-toggle="collapse" data-bs-target="#${bodyId}">${title}</button>
+              <div id="${bodyId}" class="accordion-collapse collapse show">
+                <div class="accordion-body">
+                  <div class="menu-grid"></div>
+                </div>
+              </div>
+            </div>`;
+          const gridBody = section.querySelector(".menu-grid");
+
+          (grouped[cid] || [])
+            .sort((x,y)=> String(x.name).localeCompare(String(y.name)))
+            .forEach(it => {
+              const card = document.createElement("div");
+              card.className = "menu-item";
+              const price = formatRM(it.price);
+              const isAvailable = it.isAvailable !== false;
+
+              // Build image HTML
+              let imageHTML = '';
+              if (it.imageUrl) {
+                imageHTML = `<img src="${it.imageUrl}" alt="${it.name}" class="menu-item-image" />`;
+              } else {
+                imageHTML = `<div class="menu-item-no-image">🍜</div>`;
+              }
+
+              card.innerHTML = `
+                ${imageHTML}
+                <div class="menu-item-details">
+                  <div class="menu-item-name">${it.name}</div>
+                  <div class="menu-item-price">${price}</div>
+                  ${!isAvailable ? '<div style="color:#dc3545; font-size:0.85rem; margin-top:0.5rem; font-weight:600;">Habis</div>' : ''}
+                </div>
+              `;
+
+              if (isAvailable) {
+                card.style.cursor = 'pointer';
+                card.onclick = () => {
+                  window.addItem(it.name, it.price ?? 0);
+                };
+              } else {
+                card.style.opacity = '0.6';
+                card.style.cursor = 'not-allowed';
+              }
+
+              gridBody.appendChild(card);
+            });
+
+          menuContainer.appendChild(section);
+        });
+    }
+
+    // Initialize default categories if they don't exist (doesn't delete existing ones!)
+    async function initializeDefaultCategories() {
+      try {
+        const defaultCategories = [
+          { id: 'sup', name: 'Sup', sort: 1 },
+          { id: 'goreng', name: 'Goreng', sort: 2 },
+          { id: 'minuman', name: 'Minuman', sort: 3 }
+        ];
+
+        for (const cat of defaultCategories) {
+          const catDocRef = doc(db, `restaurants/${restaurantId}/categories`, cat.id);
+          const catDoc = await getDoc(catDocRef);
+
+          if (!catDoc.exists()) {
+            await setDoc(catDocRef, {
+              name: cat.name,
+              sort: cat.sort,
+              createdAt: serverTimestamp()
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing categories:', error);
+      }
+    }
+
+    // Initialize categories (non-blocking)
+    initializeDefaultCategories();
+
+    let currentCats = [];
+    let currentItems = [];
+
+    const catsQ  = query(collection(db, `restaurants/${restaurantId}/categories`), orderBy("sort"));
+    const itemsQ = query(collection(db, `restaurants/${restaurantId}/menuItems`), orderBy("name"));
+
+    onSnapshot(
+      catsQ,
+      snap => {
+        currentCats = snap.docs.map(d=>({categoryId: d.id, ...d.data()}));
+        allCategories = currentCats;
+        console.log("📥 categories found:", snap.size, currentCats);
+        if (allCategories.length > 0) {
+          renderCategoryFilters(allCategories);
+          renderFilteredMenu();
+        }
+      },
+      err => {
+        console.error("❌ categories onSnapshot error:", err);
+        alert("Categories read error: " + err.code);
+      }
+    );
+
+    onSnapshot(
+      itemsQ,
+      snap => {
+        currentItems = snap.docs.map(d=>({id:d.id, ...d.data()}));
+        allMenuItems = currentItems;
+        console.log("📥 menuItems docs:", snap.size);
+        renderFilteredMenu();
+      },
+      err => {
+        console.error("❌ menuItems onSnapshot error:", err);
+        alert("Menu read error: " + err.code);
+      }
+    );
+  });
+</script>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <style>
+    :root {
+      --kedah-green: #2d5016;
+      --kedah-light: #4a7c23;
+      --kedah-yellow: #f5c518;
+      --bg-light: #f8faf7;
+      --white: #ffffff;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body { 
+      background: linear-gradient(135deg, #e8f5e9 0%, #f1f8f4 100%);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      padding: 0;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, var(--kedah-green), var(--kedah-light));
+      padding: 1.2rem;
+      box-shadow: 0 4px 12px rgba(45, 80, 22, 0.2);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .header-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .header h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--kedah-yellow);
+      margin: 0;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    #logoutBtn {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 2px solid white;
+      padding: 0.6rem 1.5rem;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    #logoutBtn:hover {
+      background: white;
+      color: var(--kedah-green);
+    }
+    
+    .main-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 2rem;
+      min-height: calc(100vh - 80px);
+    }
+    
+    .tables-section {
+      background: white;
+      border-radius: 16px;
+      padding: 0;
+      box-shadow: 0 8px 24px rgba(45, 80, 22, 0.08);
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+    
+    .table-section-header {
+      padding: 1.5rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: white;
+      transition: background 0.3s;
+    }
+    
+    .table-section-header:hover {
+      background: #f8faf7;
+    }
+    
+    .table-section-content {
+      padding: 0 1.5rem 1.5rem 1.5rem;
+      max-height: 1000px;
+      overflow: hidden;
+      transition: max-height 0.4s ease, padding 0.4s ease;
+    }
+    
+    .table-section-content.collapsed {
+      max-height: 0;
+      padding: 0 1.5rem;
+    }
+    
+    .section-toggle {
+      font-size: 1.2rem;
+      transition: transform 0.3s;
+    }
+    
+    .section-toggle.collapsed {
+      transform: rotate(-90deg);
+    }
+    
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--kedah-green);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    #tableButtons {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+      gap: 0.8rem;
+    }
+    
+    #tableButtons button {
+      padding: 1rem 0.5rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    #tableButtons button.btn-success {
+      background: var(--kedah-light);
+      color: white;
+      box-shadow: 0 4px 12px rgba(74, 124, 35, 0.3);
+    }
+    
+    #tableButtons button.btn-danger {
+      background: #ef4444;
+      color: white;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+    
+    #tableButtons button.active {
+      border: 3px solid var(--kedah-yellow);
+      box-shadow: 0 0 0 4px rgba(245, 197, 24, 0.2);
+      transform: scale(1.05);
+    }
+    
+    .menu-section {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(45, 80, 22, 0.08);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .menu-header {
+      background: linear-gradient(135deg, var(--kedah-green), var(--kedah-light));
+      color: white;
+      padding: 1.5rem;
+      font-size: 1.3rem;
+      font-weight: 700;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .category-filters {
+      display: flex;
+      gap: 8px;
+      padding: 1rem 1.5rem;
+      background: white;
+      border-bottom: 2px solid #f0f0f0;
+      flex-wrap: wrap;
+    }
+
+    .category-filters button {
+      padding: 8px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      background: white;
+      color: var(--kedah-green);
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .category-filters button:hover {
+      border-color: var(--kedah-green);
+      background: #f8faf7;
+    }
+
+    .category-filters button.active {
+      background: var(--kedah-green);
+      color: white;
+      border-color: var(--kedah-green);
+    }
+    
+    #selectedTable {
+      padding: 0 1.5rem;
+      padding-top: 1rem;
+      color: #64748b;
+      font-size: 0.95rem;
+    }
+    
+    .menu-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      max-height: 65vh;
+    }
+    
+    .accordion-item {
+      border: none;
+      background: #f8faf7;
+      margin-bottom: 0.75rem;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    
+    .accordion-item:hover {
+      box-shadow: 0 4px 12px rgba(45, 80, 22, 0.1);
+    }
+    
+    .accordion-button {
+      background: #f8faf7;
+      border: none;
+      font-weight: 600;
+      color: var(--kedah-green);
+      padding: 0.9rem 1rem;
+      font-size: 0.95rem;
+    }
+    
+    .accordion-button:not(.collapsed) {
+      background: linear-gradient(135deg, var(--kedah-green), var(--kedah-light));
+      color: white;
+    }
+    
+    .accordion-body {
+      padding: 0.75rem;
+      background: white;
+    }
+    
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 0.75rem;
+    }
+    
+    .menu-item {
+      background: white;
+      border: 2px solid #e8f5e9;
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .menu-item:hover {
+      border-color: var(--kedah-yellow);
+      box-shadow: 0 6px 12px rgba(45, 80, 22, 0.12);
+      transform: translateY(-3px);
+    }
+    
+    .menu-item-image {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      background: linear-gradient(135deg, #f1f8f4, #e8f5e9);
+    }
+    
+    .menu-item-no-image {
+      width: 100%;
+      height: 120px;
+      background: linear-gradient(135deg, #e8f5e9, #f1f8f4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      color: var(--kedah-light);
+      opacity: 0.5;
+    }
+    
+    .menu-item-details {
+      padding: 0.75rem;
+      text-align: center;
+    }
+    
+    .menu-item-name {
+      font-weight: 600;
+      color: var(--kedah-green);
+      margin-bottom: 0.4rem;
+      font-size: 0.85rem;
+      line-height: 1.3;
+      min-height: 2.2em;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    
+    .menu-item-price {
+      color: var(--kedah-yellow);
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    .cart-sidebar {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(45, 80, 22, 0.08);
+      display: flex;
+      flex-direction: column;
+      height: fit-content;
+      position: sticky;
+      top: 100px;
+    }
+    
+    .cart-header {
+      background: linear-gradient(135deg, var(--kedah-green), var(--kedah-light));
+      color: white;
+      padding: 1.5rem;
+      font-size: 1.2rem;
+      font-weight: 700;
+      border-radius: 16px 16px 0 0;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .cart-content {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 400px;
+      padding: 1rem;
+    }
+    
+    #orderList {
+      list-style: none;
+    }
+    
+    .cart-item {
+      background: white;
+      padding: 1rem;
+      border-radius: 12px;
+      margin-bottom: 0.75rem;
+      border: 2px solid #e8f5e9;
+      box-shadow: 0 2px 8px rgba(45, 80, 22, 0.06);
+      transition: all 0.2s;
+    }
+    
+    .cart-item:hover {
+      border-color: var(--kedah-yellow);
+      box-shadow: 0 4px 12px rgba(45, 80, 22, 0.1);
+    }
+    
+    .cart-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      gap: 0.5rem;
+      text-align: center;
+    }
+    
+    .cart-item-name {
+      font-weight: 600;
+      color: var(--kedah-green);
+      font-size: 0.9rem;
+      flex: 1;
+      text-align: left;
+    }
+    
+    .cart-item-price {
+      color: var(--kedah-yellow);
+      font-weight: 700;
+      font-size: 0.95rem;
+      white-space: nowrap;
+      text-align: right;
+    }
+    
+    .cart-item-qty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      background: #f8faf7;
+      padding: 0.5rem;
+      border-radius: 8px;
+      margin: 0.75rem auto;
+      max-width: 200px;
+    }
+    
+    .qty-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: var(--kedah-light);
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: bold;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .qty-btn:hover {
+      background: var(--kedah-green);
+      transform: scale(1.1);
+    }
+    
+    .qty-display {
+      flex: 1;
+      text-align: center;
+      font-weight: 600;
+      color: var(--kedah-green);
+      font-size: 0.95rem;
+    }
+    
+    .cart-item-note {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 0.5rem;
+      padding: 0.4rem 0.6rem;
+      background: #f1f5f9;
+      border-radius: 6px;
+      font-style: italic;
+    }
+    
+    .cart-item-actions {
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    
+    .cart-item-actions.show {
+      display: grid;
+    }
+    
+    .edit-btn-container {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 0.5rem;
+    }
+    
+    .edit-btn {
+      padding: 0.4rem 0.8rem;
+      border: 2px solid var(--kedah-light);
+      background: white;
+      color: var(--kedah-green);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    
+    .edit-btn:hover {
+      background: var(--kedah-light);
+      color: white;
+      transform: translateY(-1px);
+    }
+    
+    .edit-btn.active {
+      background: var(--kedah-green);
+      color: white;
+    }
+    
+    .note-btn, .remove-btn {
+      padding: 0.5rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+    }
+    
+    .note-btn {
+      background: #e3f2fd;
+      color: #1976d2;
+      border: 1px solid #bbdefb;
+    }
+    
+    .note-btn:hover {
+      background: #bbdefb;
+    }
+    
+    .remove-btn {
+      background: #fee;
+      color: #dc3545;
+      border: 1px solid #fcc;
+    }
+    
+    .remove-btn:hover {
+      background: #fcc;
+    }
+    
+    .cart-footer {
+      padding: 1.5rem;
+      border-top: 2px solid #f1f5f9;
+    }
+    
+    .total-section {
+      margin-bottom: 1rem;
+    }
+    
+    .total-label {
+      color: #64748b;
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 0.3rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .total-price {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--kedah-green);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      letter-spacing: -0.5px;
+    }
+    
+    .action-buttons {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.8rem;
+    }
+    
+    .btn-action {
+      padding: 1rem;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 1rem;
+    }
+    
+    .btn-submit {
+      background: linear-gradient(135deg, var(--kedah-green), var(--kedah-light));
+      color: white;
+      box-shadow: 0 4px 12px rgba(45, 80, 22, 0.3);
+    }
+    
+    .btn-submit:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(45, 80, 22, 0.4);
+    }
+    
+    .btn-clear {
+      background: #f3f4f6;
+      color: #dc3545;
+      border: 2px solid #fcc;
+    }
+    
+    .btn-clear:hover {
+      background: #fee;
+    }
+    
+    .btn-logout {
+      background: white;
+      border: 2px solid #dc3545;
+      color: #dc3545;
+      font-weight: 600;
+      border-radius: 10px;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-logout:hover {
+      background: #fef2f2;
+      transform: translateY(-2px);
+    }
+    
+    @media (max-width: 1280px) {
+      .menu-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      }
+    }
+    
+    @media (max-width: 1024px) {
+      .main-container {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      .cart-sidebar {
+        position: static;
+        max-width: 100%;
+      }
+      .menu-content {
+        max-height: 500px;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .main-container {
+        padding: 1rem 0.75rem;
+      }
+      #tableButtons {
+        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+        gap: 0.6rem;
+      }
+      .menu-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.6rem;
+      }
+      .menu-item-image, .menu-item-no-image {
+        height: 100px;
+      }
+      .menu-item-name {
+        font-size: 0.8rem;
+      }
+      .menu-item-price {
+        font-size: 1rem;
+      }
+      .header h2 {
+        font-size: 1.4rem;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .menu-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      #tableButtons {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    
+    .empty-cart {
+      text-align: center;
+      color: #94a3b8 center;
+      color: #999;
+      padding: 2rem 1rem;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-content">
+      <h2>Waiter Section</h2>
+      <button id="logoutBtn" class="btn-logout">Logout</button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTAINER -->
+  <div class="main-container">
+    <!-- LEFT: MENU & TABLES -->
+    <div>
+      <!-- TABLE SELECTION -->
+      <div class="tables-section">
+        <div class="table-section-header" onclick="toggleTableSection()">
+          <div class="section-title" style="margin: 0;">Select Table / Bungkus <span id="selectedTableLabel" style="color: var(--kedah-yellow); font-weight: 700;"></span></div>
+          <span class="section-toggle">▼</span>
+        </div>
+        <div class="table-section-content" id="tableSectionContent">
+          <div id="tableButtons"></div>
+          <input type="hidden" id="tableNumber" />
+        </div>
+      </div>
+
+      <!-- MENU -->
+      <div class="menu-section">
+        <div class="menu-header">Menu</div>
+        <!-- Category Filter Buttons -->
+        <div class="category-filters" id="categoryFilters">
+          <!-- Rendered by JS -->
+        </div>
+        <div class="menu-content">
+          <div id="menuContainer"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: CART SIDEBAR -->
+    <div class="cart-sidebar">
+      <div class="cart-header">Order Cart</div>
+      <div class="cart-content">
+        <ul id="orderList"></ul>
+        <div id="emptyCart" class="empty-cart">No items yet</div>
+      </div>
+      <div class="cart-footer">
+        <div class="total-section">
+          <div class="total-label">Total</div>
+          <div class="total-price">RM <span id="totalPrice">0.00</span></div>
+        </div>
+        <div class="action-buttons">
+          <button class="btn-action btn-submit" onclick="submitOrder()">Send Order</button>
+          <button class="btn-action btn-clear" onclick="clearOrder()">Clear</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔧 Non-module script: cart + submit (unchanged except exposing addItem globally) -->
+  <script>
+    // Toggle table section
+    function toggleTableSection() {
+      const content = document.getElementById('tableSectionContent');
+      const toggle = document.querySelector('.section-toggle');
+      if (content && toggle) {
+        content.classList.toggle('collapsed');
+        toggle.classList.toggle('collapsed');
+      }
+    }
+    
+    let cart = [];
+    let noteTargetName = null;
+
+    // expose addItem for the module script to call
+window.addItem = function(name, price) {
+  const isBungkusTable = (
+    window.selectedTable?.type === "bungkus" ||
+    /^B(ungkus)?\s*\d+$/i.test(String(window.selectedTable?.name || ""))
+  );
+
+  const existing = cart.find(item => item.name === name && item.isBungkus === isBungkusTable);
+
+  if (existing) {
+    existing.qty++;
+  } else {
+    cart.push({
+      name,
+      price,
+      qty: 1,
+      isBungkus: isBungkusTable,
+      note: isBungkusTable ? "bungkus" : ""
+    });
+  }
+
+  updateDisplay();
+};
+
+
+    function updateDisplay() {
+      const list = document.getElementById("orderList");
+      const total = document.getElementById("totalPrice");
+      const emptyCart = document.getElementById("emptyCart");
+      
+      list.innerHTML = "";
+      let totalPrice = 0;
+
+      if (cart.length === 0) {
+        emptyCart.style.display = 'block';
+        list.style.display = 'none';
+        total.innerText = '0.00';
+        return;
+      }
+
+      emptyCart.style.display = 'none';
+      list.style.display = 'block';
+
+      cart.forEach((item, index) => {
+        const unitPrice = item.price + (item.isBungkus ? 0.5 : 0);
+        totalPrice += unitPrice * item.qty;
+
+        const noteHtml = item.note ? `<div class="cart-item-note">Note: ${item.note}</div>` : "";
+
+        const li = document.createElement("li");
+        li.className = "cart-item";
+        li.innerHTML = `
+          <div class="cart-item-header">
+            <div class="cart-item-name">${item.name}</div>
+            <div class="cart-item-price">RM ${(item.price + (item.isBungkus ? 0.5 : 0)).toFixed(2)}</div>
+          </div>
+          ${noteHtml}
+          <div class="cart-item-qty">
+            <button class="qty-btn" onclick="changeQty(${index}, -1)">−</button>
+            <div class="qty-display">${item.qty}</div>
+            <button class="qty-btn" onclick="changeQty(${index}, 1)">+</button>
+          </div>
+          <div class="edit-btn-container">
+            <button class="edit-btn" onclick="toggleActions(${index})">✏️ Edit</button>
+          </div>
+          <div class="cart-item-actions" id="actions-${index}">
+            <button class="note-btn" onclick="openNote('${item.name}')">📝 Note</button>
+            <button class="remove-btn" onclick="removeItem('${item.name}')">🗑️ Remove</button>
+          </div>
+        `;
+        list.appendChild(li);
+      });
+
+      total.innerText = totalPrice.toFixed(2);
+    }
+
+    function changeQty(index, change) {
+      cart[index].qty += change;
+      if (cart[index].qty < 1) cart.splice(index, 1);
+      updateDisplay();
+    }
+
+    function toggleActions(index) {
+      const actionsDiv = document.getElementById(`actions-${index}`);
+      const allActions = document.querySelectorAll('.cart-item-actions');
+      
+      // Close all other actions
+      allActions.forEach((action, i) => {
+        if (action.id !== `actions-${index}`) {
+          action.classList.remove('show');
+        }
+      });
+      
+      // Toggle current
+      actionsDiv.classList.toggle('show');
+    }
+
+    function removeItem(name) {
+      cart = cart.filter(item => item.name !== name);
+      updateDisplay();
+    }
+
+    function clearOrder() {
+      cart = [];
+      updateDisplay();
+    }
+
+    // 📝 Notes
+    function openNote(name) {
+      noteTargetName = name;
+      const target = cart.find(it => it.name === name);
+      document.getElementById('noteText').value = target?.note || "";
+      const modal = new bootstrap.Modal(document.getElementById('noteModal'));
+      modal.show();
+
+      document.getElementById('saveNoteBtn').onclick = () => {
+        const txt = document.getElementById('noteText').value.trim();
+        const it = cart.find(i => i.name === noteTargetName);
+        if (it) it.note = txt;
+        modal.hide();
+        updateDisplay();
+      };
+    }
+   function toggleBungkus(index) {
+  cart[index].isBungkus = !cart[index].isBungkus;
+
+  if (cart[index].isBungkus) {
+    // append Bungkus note (if not already inside)
+    if (!cart[index].note.includes("Bungkus")) {
+      cart[index].note = (cart[index].note ? cart[index].note + " · " : "") + "Bungkus";
+    }
+  } else {
+    // remove Bungkus note when un-toggled
+    cart[index].note = cart[index].note.replace(/Bungkus/gi, "").replace(/ · $/, "").trim();
+  }
+
+  updateDisplay();
+}
+
+
+    function appendQuickNote(txt) {
+      const ta = document.getElementById('noteText');
+      ta.value = (ta.value ? ta.value + " · " : "") + txt;
+    }
+
+async function mergeIntoExisting(activeOrderId, orderData) {
+  const db = window.db, rid = window.restaurantId;
+  const orderRef = window.doc(db, `restaurants/${rid}/orders`, activeOrderId);
+
+  await window.runTransaction(db, async (tx) => {
+    const snap = await tx.get(orderRef);
+    if (!snap.exists()) throw new Error("Existing order not found.");
+
+    const existing = snap.data();
+    const items = Array.isArray(existing.items) ? [...existing.items] : [];
+
+    // merge: name + unitPrice + note
+    for (const ni of orderData.items) {
+      const i = items.findIndex(it =>
+        it.name === ni.name &&
+        Number(it.unitPrice ?? it.price) === Number(ni.unitPrice) &&
+        (it.note || "") === (ni.note || "")
+      );
+
+// Always push as a new row (don’t merge with existing)
+items.push({
+  ...ni,
+  kds: {},            // reset KDS state for kitchen
+  batch: Date.now()   // optional: mark this order batch
+});
+
+
+    }
+
+    // ✅ IMPORTANT: reset section flags + force status back to active
+    tx.update(orderRef, {
+      items,
+      kds: {},                 // clear all done flags
+      status: "active",        // reopen if it was completed
+      updatedAt: window.serverTimestamp()
+    });
+  });
+}
+
+
+async function createNewTicket(orderData) {
+  const db = window.db, rid = window.restaurantId;
+
+  const newOrderId = await window.runTransaction(db, async (tx) => {
+    const counterRef = window.doc(db, `restaurants/${rid}/meta`, "orderCounter");
+    const counterSnap = await tx.get(counterRef);
+    const current = counterSnap.exists() ? (counterSnap.data().count || 0) : 0;
+    const next = current + 1;
+    const prettyId = `ORD-${String(next).padStart(5, "0")}`;
+
+    const orderRef = window.doc(db, `restaurants/${rid}/orders`, prettyId);
+    const tableRef = window.doc(db, `restaurants/${rid}/tables/${window.selectedTableId}`);
+
+    // increment order counter
+    tx.set(counterRef, { count: next }, { merge: true });
+
+    // create the new order
+    tx.set(orderRef, {
+      ...orderData,
+      orderId: prettyId,
+      createdAt: window.serverTimestamp(),
+      updatedAt: window.serverTimestamp()
+    });
+
+    // ✅ keep the table in "ordered" (red) state for ALL new tickets
+    tx.update(tableRef, {
+      status: "ordered",
+      activeOrderId: prettyId, // always update to latest ticket ID
+      updatedAt: window.serverTimestamp()
+    });
+
+    return prettyId;
+  });
+
+  return newOrderId;
+}
+
+function inferSectionFromName(name) {
+  const n = name.toLowerCase();
+  const drinkKW = [
+    "teh", "milo", "kopi", "nescafe", "neslo", "sirap", "limau", "joss", "extra joss",
+    "air panas", "air suam", "air kosong", "bandung", "horlicks", "coklat", "chocolate",
+    "3 layer", "mocha", "drink", "ais", "o ais", "bersusu", "lemon", "tapai"
+  ];
+
+  if (n.includes("goreng")) return "goreng";
+  if (n.includes("sup")) return "sup";
+  if (drinkKW.some(k => n.includes(k))) return "drinks";
+  return "sup"; // fallback
+}
+
+
+
+async function submitOrder() {
+  if (!window.selectedTable || !window.selectedTableId || cart.length === 0) {
+    alert("Please select a table and add items.");
+    return;
+  }
+
+  // 1) decide if this is a bungkus slot
+  const isBungkus =
+    (window.selectedTable?.type === "bungkus") ||
+    (/^B(ungkus)?\s*\d+$/i.test(String(window.selectedTable?.name || ""))) ||
+    (/^B\d+$/i.test(String(window.selectedTableId || "")));
+
+  // 2) nice label for display (e.g. "B1" or "T12")
+  const label =
+    window.selectedTableLabel ||
+    (isBungkus
+      ? (window.selectedTable?.name || String(window.selectedTableId))
+      : `T${window.selectedTableNumber}`);
+
+  // 3) payload to store
+  const orderData = {
+    table: label,
+    tableNumber: isBungkus ? null : window.selectedTableNumber,
+items: cart.map(i => ({
+  name: i.name,
+  unitPrice: Number(i.price) + (i.isBungkus ? 0.50 : 0),
+  qty: Number(i.qty) || 0,
+  note: i.note || (i.isBungkus ? "bungkus" : ""),
+  section: inferSectionFromName(i.name) // ✅ include this!
+})),
+
+    status: "open",
+  };
+
+  const activeOrderId = window.selectedTable.activeOrderId || null;
+
+  try {
+    if (activeOrderId) {
+      const orderRef = doc(db, `restaurants/${restaurantId}/orders/${activeOrderId}`);
+      const orderSnap = await getDoc(orderRef);
+      const orderStatus = orderSnap.exists() ? (orderSnap.data().status || "") : "";
+
+      if (["open", "active"].includes(orderStatus)) {
+        // ✅ merge into the current active ticket
+        await mergeIntoExisting(activeOrderId, orderData);
+
+        alert("Order merged into existing ticket!");
+        clearOrder();
+        document.querySelectorAll('#tableButtons button').forEach(b => b.classList.remove("active"));
+        window.selectedTable = null;
+        window.selectedTableId = null;
+        window.selectedTableNumber = null;
+        document.getElementById("tableNumber").value = "";
+        const labelEl = document.getElementById("selectedTableLabel");
+        if (labelEl) labelEl.innerText = "";
+        updateDisplay();
+        return; // ✅ STOP here after merging
+      } else {
+        // 🔴 old ticket was completed/cancelled → create new ticket
+        const newId = await createNewTicket(orderData);
+        alert("New order created: " + newId);
+      }
+    } else {
+      // first ticket for this table → create and set activeOrderId on the table
+      const rid = window.restaurantId, db = window.db;
+      await window.runTransaction(db, async (tx) => {
+        const counterRef = window.doc(db, `restaurants/${rid}/meta`, "orderCounter");
+        const counterSnap = await tx.get(counterRef);
+        const current = counterSnap.exists() ? (counterSnap.data().count || 0) : 0;
+        const next = current + 1;
+        const prettyId = `ORD-${String(next).padStart(5, "0")}`;
+
+        const orderRef = window.doc(db, `restaurants/${rid}/orders`, prettyId);
+        const tableRef = window.doc(db, `restaurants/${rid}/tables/${window.selectedTableId}`);
+
+        tx.set(counterRef, { count: next }, { merge: true });
+        tx.set(orderRef, {
+          ...orderData,
+          orderId: prettyId,
+          createdAt: window.serverTimestamp(),
+          updatedAt: window.serverTimestamp()
+        });
+        tx.update(tableRef, {
+          status: "ordered",
+          activeOrderId: prettyId,
+          updatedAt: window.serverTimestamp()
+        });
+      });
+      alert("Order sent successfully!");
+    }
+
+    // cleanup after success
+    clearOrder();
+    document.querySelectorAll('#tableButtons button').forEach(b => b.classList.remove("active"));
+    window.selectedTable = null;
+    window.selectedTableId = null;
+    window.selectedTableNumber = null;
+    document.getElementById("tableNumber").value = "";
+    const labelEl = document.getElementById("selectedTableLabel");
+    if (labelEl) labelEl.innerText = "";
+  } catch (e) {
+    console.error("[SUBMIT ORDER FAILED]", e);
+    alert("Failed to send order: " + (e.message || e.code));
+  }
+}
+
+    updateDisplay();    
+
+</script>
+
+
+
+  
+
+
+  </script>
+
+  <!-- 📝 Note Modal -->
+  <div class="modal fade" id="noteModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content p-3">
+        <h5 class="mb-2">📝 Item Note</h5>
+
+        <div class="d-flex flex-wrap gap-2 mb-2">
+          <button class="btn btn-sm btn-outline-secondary" onclick="appendQuickNote('Tak pedas')">Tak pedas</button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="appendQuickNote('Tak sayur')">Tak sayur</button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="appendQuickNote('No bawang')">No bawang</button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="appendQuickNote('Kurang manis')">Kurang manis</button>
+        </div>
+
+        <textarea id="noteText" class="form-control" rows="3" placeholder="Contoh: kurang garam, no cili..."></textarea>
+
+        <div class="d-grid mt-3">
+          <button class="btn btn-primary" id="saveNoteBtn">Save Note</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Existing order options -->
+<div class="modal fade" id="existingOrderModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">This table already has an order</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        What would you like to do?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="btnNewTicket">Start New Order</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

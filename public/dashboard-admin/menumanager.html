@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Menu Manager — Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-yellow: #F5C518;
+      --primary-dark: #31572c;
+      --sidebar-bg: linear-gradient(180deg, #35651f 0%, #4f7d2c 100%);
+      --card-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      --accent-green: #22c55e;
+      --accent-red: #ef4444;
+    }
+    
+    * { box-sizing: border-box; }
+    
+    body {
+      background: #f8f9fc;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 260px;
+      background: var(--sidebar-bg);
+      border-right: 2px solid rgba(245, 197, 24, 0.35);
+      padding: 20px;
+      transition: transform 0.3s ease-in-out;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 12px;
+      margin-bottom: 24px;
+    }
+
+    .brand-logo {
+      width: 56px;
+      height: 56px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 3px solid var(--primary-yellow);
+    }
+
+    .brand-logo i {
+      color: var(--primary-yellow);
+      font-size: 24px;
+    }
+
+    .brand-text h4 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+
+    .brand-text .brand-tag {
+      display: inline-block;
+      background: var(--primary-yellow);
+      color: #244315;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-top: 4px;
+    }
+
+    .sidebar-handle {
+      position: fixed;
+      top: 50%;
+      left: 260px;
+      transform: translateY(-50%);
+      background: var(--primary-yellow);
+      color: #244315;
+      border: none;
+      padding: 12px 8px;
+      border-radius: 0 8px 8px 0;
+      cursor: pointer;
+      transition: left 0.3s ease-in-out;
+      z-index: 1100;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+    }
+
+    .sidebar a, .sidebar .menu-toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: rgba(255, 255, 255, 0.85) !important;
+      text-decoration: none;
+      padding: 12px 14px;
+      border-radius: 10px;
+      margin-bottom: 4px;
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: all 0.2s ease;
+    }
+
+    .sidebar a i, .sidebar .menu-toggle i {
+      width: 20px;
+      text-align: center;
+      font-size: 1rem;
+    }
+
+    .sidebar a.active {
+      background: rgba(245, 197, 24, 0.2);
+      color: #fff !important;
+      border: 1px solid var(--primary-yellow);
+    }
+
+    .sidebar a.active i {
+      color: var(--primary-yellow);
+    }
+
+    .sidebar a:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff !important;
+    }
+
+    .sidebar .menu-toggle {
+      cursor: pointer;
+      justify-content: space-between;
+    }
+
+    .sidebar .menu-toggle:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .sidebar .menu-toggle .arrow {
+      transition: transform 0.3s ease;
+      font-size: 0.7rem;
+    }
+
+    .sidebar .menu-toggle.collapsed .arrow {
+      transform: rotate(-90deg);
+    }
+
+    .sidebar .submenu {
+      margin-left: 20px;
+      padding-left: 12px;
+      border-left: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .sidebar .submenu a {
+      font-size: 0.9rem;
+      padding: 10px 14px;
+    }
+
+    .sidebar-footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      padding-top: 16px;
+      margin-top: auto;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+
+    .user-avatar {
+      width: 42px;
+      height: 42px;
+      background: var(--primary-yellow);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+
+    .user-details {
+      flex: 1;
+    }
+
+    .user-details .name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #ffffff;
+    }
+
+    .user-details .role {
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .sidebar.closed {
+      transform: translateX(-100%);
+    }
+    .sidebar.closed ~ .sidebar-handle {
+      left: 0;
+    }
+
+    /* MAIN CONTENT */
+    .content {
+      margin-left: 260px;
+      padding: 24px 32px;
+      transition: margin-left 0.3s ease-in-out;
+      min-height: 100vh;
+    }
+
+    .content.full {
+      margin-left: 0;
+    }
+
+    /* PAGE HEADER */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .page-header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+
+    .page-header .breadcrumb {
+      font-size: 0.85rem;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    /* CARDS */
+    .card {
+      border: none;
+      border-radius: 16px;
+      box-shadow: var(--card-shadow);
+      background: white;
+    }
+
+    .card-header-custom {
+      background: linear-gradient(135deg, #3d6f25 0%, #5f8d32 100%);
+      color: white;
+      padding: 16px 20px;
+      border-radius: 16px 16px 0 0;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-header-custom i {
+      color: var(--primary-yellow);
+    }
+
+    .card-body-custom {
+      padding: 20px;
+    }
+
+    /* FORM STYLES */
+    .form-label {
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #555;
+    }
+
+    .form-control, .form-select {
+      border-radius: 10px;
+      border: 1px solid #e0e0e0;
+      padding: 10px 14px;
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: var(--primary-yellow);
+      box-shadow: 0 0 0 3px rgba(245, 197, 24, 0.15);
+    }
+
+    /* BUTTONS */
+    .btn-primary {
+      background: linear-gradient(135deg, #31572c 0%, #5f8d32 100%);
+      border: none;
+      border-radius: 10px;
+      padding: 10px 20px;
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #5f8d32 0%, #31572c 100%);
+    }
+
+    /* IMAGE PREVIEW */
+    .image-preview {
+      width: 100%;
+      height: 180px;
+      border: 2px dashed #dee2e6;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      margin-bottom: 10px;
+      background: #f8f9fa;
+    }
+
+    .image-preview img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: cover;
+    }
+
+    .image-preview-placeholder {
+      color: #6c757d;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .menu-item-image {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    /* TABLE */
+    .table {
+      margin-bottom: 0;
+    }
+
+    .table th {
+      background: #f8f9fc;
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      color: #666;
+      border: none;
+      padding: 12px;
+    }
+
+    .table td {
+      padding: 12px;
+      vertical-align: middle;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .badge {
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 6px;
+    }
+
+    .ellipsis {
+      max-width: 200px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    @media (max-width: 992px) {
+      .content { margin-left: 0; padding: 16px; }
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-handle { left: 0; }
+    }
+  </style>
+  <link rel="stylesheet" href="../css/admin-sidebar.css">
+</head>
+<body>
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo" aria-hidden="true">
+      <svg viewBox="0 0 64 64">
+        <path d="M18 8c1.2 0 2.1.9 2.1 2.1v17.4c0 1 .8 1.8 1.8 1.8h1.2V10.1c0-1.2.9-2.1 2.1-2.1s2.1.9 2.1 2.1v19.2h1.2c1 0 1.8-.8 1.8-1.8V10.1c0-1.2.9-2.1 2.1-2.1s2.1.9 2.1 2.1v18.4c0 5.7-3.8 10.5-9 11.9v14.4c0 1.7-1.4 3.2-3.2 3.2s-3.2-1.4-3.2-3.2V40.4c-5.2-1.4-9-6.2-9-11.9V10.1C15.9 8.9 16.8 8 18 8Z"/>
+        <path d="M48.3 7.8c-7.2 2.3-11.1 8.5-11.1 16.4v13.6c0 1.8 1.5 3.3 3.3 3.3h4.7v13.7c0 1.7 1.4 3.2 3.2 3.2s3.2-1.4 3.2-3.2V10.1c0-1.6-1.6-2.8-3.3-2.3Z"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <h4>Bihun Sup Daging<br>Selambak</h4>
+      <span class="brand-sub">Staff Portal</span>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a href="../admin.html">
+      <i class="fas fa-chart-pie"></i>
+      <span>Overview</span>
+    </a>
+    <div class="menu-toggle" id="storeToggle">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <i class="fas fa-store"></i>
+        <span>Store Management</span>
+      </div>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="submenu" id="storeSubmenu">
+      <a href="tablemanagement.html">
+        <i class="fas fa-chair"></i>
+        Table Management
+      </a>
+      <a href="menumanager.html" class="active">
+        <i class="fas fa-book-open"></i>
+        Menu Management
+      </a>
+    </div>
+    
+    <div class="menu-toggle" id="staffToggle">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <i class="fas fa-users"></i>
+        <span>Staff Management</span>
+      </div>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="submenu" id="staffSubmenu" style="display:none">
+      <a href="staffmanagement.html">
+        <i class="fas fa-id-card"></i>
+        Staff Directory
+      </a>
+      <a href="staffattendance.html">
+        <i class="fas fa-clock"></i>
+        Attendance
+      </a>
+      <a href="staffpayroll.html">
+        <i class="fas fa-money-bill-wave"></i>
+        Payroll
+      </a>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="user-avatar" id="userAvatar">A</div>
+      <div class="user-details">
+        <div class="name" id="whoami">Loading...</div>
+        <div class="role">Admin</div>
+      </div>
+    </div>
+    <button id="logoutBtn" class="btn btn-danger btn-sm w-100">
+      <i class="fas fa-sign-out-alt me-2"></i>Logout
+    </button>
+  </div>
+</div>
+
+<button id="sidebarHandle" class="sidebar-handle"><i class="fas fa-chevron-left"></i></button>
+
+<!-- MAIN CONTENT -->
+<div class="content">
+  <div class="page-header">
+    <div>
+      <div class="breadcrumb">Menu Manager</div>
+      <h2>Add / Edit Menu Items</h2>
+    </div>
+    <button id="refreshMenuBtn" class="btn btn-outline-secondary btn-sm">
+      <i class="fas fa-sync-alt me-1"></i> Refresh
+    </button>
+  </div>
+
+  <div class="row g-4">
+    <!-- Add New Item -->
+    <div class="col-12 col-lg-5">
+      <div class="card">
+        <div class="card-header-custom">
+          <i class="fas fa-plus-circle"></i> Add New Item
+        </div>
+        <div class="card-body-custom">
+          <div class="mb-3">
+            <label class="form-label">Name</label>
+            <input id="mName" class="form-control" placeholder="e.g. Bihun Sup Daging Selambak">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Category</label>
+            <select id="mCat" class="form-select">
+              <option value="">Select a category...</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Image (Optional)</label>
+            <div id="imagePreview" class="image-preview">
+              <div class="image-preview-placeholder">
+                <i class="fas fa-camera fa-2x mb-2"></i><br>
+                <small>Click to upload image</small>
+              </div>
+            </div>
+            <input type="file" id="mImage" class="form-control" accept="image/*" style="display:none;">
+            <button type="button" id="selectImageBtn" class="btn btn-outline-secondary btn-sm w-100 mb-2">
+              <i class="fas fa-image me-1"></i> Choose Image
+            </button>
+            <button type="button" id="removeImageBtn" class="btn btn-outline-danger btn-sm w-100 d-none">
+              <i class="fas fa-trash me-1"></i> Remove Image
+            </button>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Price (RM)</label>
+            <input id="mPrice" type="number" step="0.01" class="form-control" placeholder="e.g. 13">
+          </div>
+          <div class="form-check mb-3">
+            <input id="mActive" class="form-check-input" type="checkbox" checked>
+            <label class="form-check-label" for="mActive">Active</label>
+          </div>
+          <button id="addMenuBtn" class="btn btn-primary w-100">
+            <i class="fas fa-plus me-2"></i>Add Item
+          </button>
+          <div class="small text-success mt-2 d-none" id="menuSavedMsg">
+            <i class="fas fa-check-circle me-1"></i>Saved!
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Current Menu -->
+    <div class="col-12 col-lg-7">
+      <div class="card">
+        <div class="card-header-custom">
+          <i class="fas fa-list"></i> Current Menu
+        </div>
+        <div class="card-body-custom">
+          <!-- Category Filter Buttons -->
+          <div class="mb-3 d-flex flex-wrap gap-2" id="categoryFilters">
+            <button class="btn btn-sm btn-outline-primary active" data-category="all">
+              <i class="fas fa-th-large me-1"></i>All
+            </button>
+          </div>
+          
+          <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+            <table class="table table-hover mb-0">
+              <thead style="position: sticky; top: 0; z-index: 1;">
+                <tr>
+                  <th>Image</th>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th class="text-end">Price</th>
+                  <th>Active</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="menuTbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" style="border-radius: 16px;">
+      <div class="modal-header" style="background: var(--primary-dark); color: white; border-radius: 16px 16px 0 0;">
+        <h5 class="modal-title"><i class="fas fa-edit me-2" style="color: var(--primary-yellow);"></i>Edit Menu Item</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input id="editId" type="hidden">
+        <input id="editCurrentImage" type="hidden">
+        <div class="mb-3">
+          <label class="form-label">Name</label>
+          <input id="editName" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Category</label>
+          <select id="editCat" class="form-select">
+            <option value="">Select a category...</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Image</label>
+          <div id="editImagePreview" class="image-preview">
+            <div class="image-preview-placeholder">
+              <i class="fas fa-camera fa-2x mb-2"></i><br>
+              <small>No image</small>
+            </div>
+          </div>
+          <input type="file" id="editImage" class="form-control" accept="image/*" style="display:none;">
+          <button type="button" id="editSelectImageBtn" class="btn btn-outline-secondary btn-sm w-100 mb-2">
+            <i class="fas fa-image me-1"></i> Change Image
+          </button>
+          <button type="button" id="editRemoveImageBtn" class="btn btn-outline-danger btn-sm w-100 d-none">
+            <i class="fas fa-trash me-1"></i> Remove Image
+          </button>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Price</label>
+          <input id="editPrice" type="number" step="0.01" class="form-control">
+        </div>
+        <div class="form-check mb-3">
+          <input type="checkbox" id="editActive" class="form-check-input">
+          <label class="form-check-label" for="editActive">Active</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="deleteBtn" class="btn btn-danger">
+          <i class="fas fa-trash me-1"></i>Delete
+        </button>
+        <button id="saveBtn" class="btn btn-primary">
+          <i class="fas fa-save me-1"></i>Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
+    getDoc, getDocs, orderBy, query, serverTimestamp, setDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+  import { firebaseConfig, RESTAURANT_ID } from "../js/firebase-config.esm.js";
+  import { setupAdminProfile } from "../js/admin-profile.esm.js";
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
+  const storage = getStorage(app);
+  const rcol = (c) => collection(db, "restaurants", RESTAURANT_ID, c);
+  const rdoc = (c, id) => doc(db, "restaurants", RESTAURANT_ID, c, id);
+  const toRM = (n) => "RM " + (Math.round(n * 100) / 100).toFixed(2);
+
+  // UI Elements
+  const mName = document.getElementById('mName');
+  const mCat = document.getElementById('mCat');
+  const mPrice = document.getElementById('mPrice');
+  const mImage = document.getElementById('mImage');
+  const imagePreview = document.getElementById('imagePreview');
+  const selectImageBtn = document.getElementById('selectImageBtn');
+  const removeImageBtn = document.getElementById('removeImageBtn');
+  const editImage = document.getElementById('editImage');
+  const editImagePreview = document.getElementById('editImagePreview');
+  const editSelectImageBtn = document.getElementById('editSelectImageBtn');
+  const editRemoveImageBtn = document.getElementById('editRemoveImageBtn');
+  const mActive = document.getElementById('mActive');
+  const addMenuBtn = document.getElementById('addMenuBtn');
+  const menuTbody = document.getElementById('menuTbody');
+  const menuSavedMsg = document.getElementById('menuSavedMsg');
+  const refreshMenuBtn = document.getElementById('refreshMenuBtn');
+
+  let IS_ADMIN = false;
+  let selectedImageFile = null;
+  let editSelectedImageFile = null;
+
+  // Sidebar toggle
+  const sidebar = document.getElementById('sidebar');
+  const sidebarHandle = document.getElementById('sidebarHandle');
+  const content = document.querySelector('.content');
+
+  sidebarHandle?.addEventListener('click', () => {
+    sidebar.classList.toggle('closed');
+    content.classList.toggle('full');
+    const icon = sidebarHandle.querySelector('i');
+    icon.className = sidebar.classList.contains('closed') ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
+  });
+
+  // Store submenu toggle
+  const storeToggle = document.getElementById('storeToggle');
+  const storeSubmenu = document.getElementById('storeSubmenu');
+  storeToggle?.addEventListener('click', () => {
+    storeToggle.classList.toggle('collapsed');
+    storeSubmenu.style.display = storeSubmenu.style.display === 'none' ? 'block' : 'none';
+  });
+
+  // Staff submenu toggle
+  const staffToggle = document.getElementById('staffToggle');
+  const staffSubmenu = document.getElementById('staffSubmenu');
+  staffToggle?.addEventListener('click', () => {
+    staffToggle.classList.toggle('collapsed');
+    staffSubmenu.style.display = staffSubmenu.style.display === 'none' ? 'block' : 'none';
+  });
+
+  function enableAdminUI(enabled) {
+    IS_ADMIN = enabled;
+    addMenuBtn.disabled = !enabled;
+    mName.disabled = !enabled;
+    mCat.disabled = !enabled;
+    mPrice.disabled = !enabled;
+    mActive.disabled = !enabled;
+    mImage.disabled = !enabled;
+  }
+
+  // Image preview handlers for Add form
+  selectImageBtn.addEventListener('click', () => mImage.click());
+
+  mImage.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      selectedImageFile = file;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        imagePreview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+        removeImageBtn.classList.remove('d-none');
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  removeImageBtn.addEventListener('click', () => {
+    selectedImageFile = null;
+    mImage.value = '';
+    imagePreview.innerHTML = `<div class="image-preview-placeholder"><i class="fas fa-camera fa-2x mb-2"></i><br><small>Click to upload image</small></div>`;
+    removeImageBtn.classList.add('d-none');
+  });
+
+  // Image preview handlers for Edit modal
+  editSelectImageBtn.addEventListener('click', () => editImage.click());
+
+  editImage.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      editSelectedImageFile = file;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        editImagePreview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+        editRemoveImageBtn.classList.remove('d-none');
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  editRemoveImageBtn.addEventListener('click', () => {
+    editSelectedImageFile = 'DELETE';
+    editImage.value = '';
+    editImagePreview.innerHTML = `<div class="image-preview-placeholder"><i class="fas fa-camera fa-2x mb-2"></i><br><small>No image</small></div>`;
+    editRemoveImageBtn.classList.add('d-none');
+  });
+
+  // Compress image before upload
+  async function compressImage(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            
+            // Resize if too large (max 800px width)
+            const maxWidth = 800;
+            if (width > maxWidth) {
+              height = (height * maxWidth) / width;
+              width = maxWidth;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Convert to blob with compression
+            canvas.toBlob((blob) => {
+              if (blob) {
+                console.log(`Compressed image: ${(blob.size / 1024).toFixed(2)} KB`);
+                resolve(blob);
+              } else {
+                reject(new Error('Failed to compress image'));
+              }
+            }, 'image/jpeg', 0.7); // 70% quality
+          } catch (err) {
+            reject(err);
+          }
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Upload image to Firebase Storage
+  async function uploadImage(file, itemId) {
+    try {
+      console.log('Starting image upload...');
+      console.log(`Original file size: ${(file.size / 1024).toFixed(2)} KB`);
+      
+      // Compress image first
+      const compressedBlob = await compressImage(file);
+      console.log('Image compressed successfully');
+      
+      const storageRef = ref(storage, `restaurants/${RESTAURANT_ID}/menu-images/${itemId}_${Date.now()}.jpg`);
+      console.log('Uploading to Firebase Storage...');
+      
+      const metadata = {
+        contentType: 'image/jpeg',
+        customMetadata: {
+          'uploadedBy': 'menuManager',
+          'itemId': itemId
+        }
+      };
+      
+      // Use uploadBytesResumable for better error handling
+      const uploadTask = uploadBytesResumable(storageRef, compressedBlob, metadata);
+      
+      return new Promise((resolve, reject) => {
+        uploadTask.on('state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            console.log('Upload progress: ' + progress.toFixed(0) + '%');
+          },
+          (error) => {
+            console.error('Upload error:', error);
+            reject(error);
+          },
+          async () => {
+            console.log('Upload complete, getting download URL...');
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              console.log('Download URL obtained:', downloadURL);
+              resolve(downloadURL);
+            } catch (err) {
+              console.error('Error getting download URL:', err);
+              reject(err);
+            }
+          }
+        );
+      });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    }
+  }
+
+  // Delete image from Firebase Storage
+  async function deleteImage(imageUrl) {
+    try {
+      if (imageUrl && imageUrl.includes('firebasestorage')) {
+        const imageRef = ref(storage, imageUrl);
+        await deleteObject(imageRef);
+      }
+    } catch (error) {
+      console.error('Error deleting image:', error);
+    }
+  }
+
+  // Load categories for dropdown
+  async function loadCategories() {
+    try {
+      const categoriesRef = collection(db, `restaurants/${RESTAURANT_ID}/categories`);
+      const snapshot = await getDocs(categoriesRef);
+      const addSelect = document.getElementById('mCat');
+      const editSelect = document.getElementById('editCat');
+
+      addSelect.innerHTML = '<option value="">Select a category...</option>';
+      editSelect.innerHTML = '<option value="">Select a category...</option>';
+
+      snapshot.forEach(doc => {
+        const option1 = document.createElement('option');
+        option1.value = doc.id;
+        option1.textContent = doc.id;
+        addSelect.appendChild(option1);
+
+        const option2 = document.createElement('option');
+        option2.value = doc.id;
+        option2.textContent = doc.id;
+        editSelect.appendChild(option2);
+      });
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    }
+  }
+
+  // Initialize default categories
+  async function initializeDefaultCategories() {
+    try {
+      const defaultCategories = ['sup', 'goreng', 'minuman'];
+
+      for (const cat of defaultCategories) {
+        const catDocRef = doc(db, `restaurants/${RESTAURANT_ID}/categories`, cat);
+        const catDoc = await getDoc(catDocRef);
+
+        if (!catDoc.exists()) {
+          await setDoc(catDocRef, {
+            name: cat,
+            createdAt: serverTimestamp()
+          });
+          console.log(`✅ Added category: ${cat}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error initializing categories:', error);
+    }
+  }
+
+  // Auth
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = "../index.html";
+      return;
+    }
+    
+    document.getElementById('whoami').textContent = user.email || "—";
+    document.getElementById('userAvatar').textContent = (user.email || "A")[0].toUpperCase();
+    setupAdminProfile(user);
+
+    const roleSnap = await getDoc(doc(db, "roles", user.uid));
+    if (roleSnap.exists() && roleSnap.data().role === "admin") {
+      enableAdminUI(true);
+    } else {
+      enableAdminUI(false);
+    }
+
+    await initializeDefaultCategories();
+    await loadCategories();
+    loadMenu();
+  });
+
+  // Logout
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    await signOut(auth);
+    window.location.href = "../index.html";
+  });
+
+  // Load menu
+  let allMenuItems = []; // Store all items globally
+  let currentFilter = 'all'; // Track current filter
+
+  async function loadMenu() {
+    menuTbody.innerHTML = '<tr><td colspan="6" class="text-center py-4"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
+    const qMenu = query(rcol("menuItems"), orderBy("name", "asc"));
+    const snap = await getDocs(qMenu);
+    allMenuItems = []; // Clear array
+    const categories = new Set();
+
+    snap.forEach(ds => {
+      const m = ds.data();
+      allMenuItems.push({ id: ds.id, ...m });
+      if (m.categoryId) categories.add(m.categoryId);
+    });
+
+    // Update category filter buttons
+    updateCategoryFilters(categories);
+    
+    // Display items based on current filter
+    displayFilteredMenu(currentFilter);
+  }
+
+  // Update category filter buttons
+  function updateCategoryFilters(categories) {
+    const filtersDiv = document.getElementById('categoryFilters');
+    const categoryIcons = {
+      'minuman': 'fa-glass-water',
+      'goreng': 'fa-fire-burner',
+      'sup': 'fa-bowl-food'
+    };
+
+    let html = `<button class="btn btn-sm btn-outline-primary ${currentFilter === 'all' ? 'active' : ''}" data-category="all">
+      <i class="fas fa-th-large me-1"></i>All
+    </button>`;
+
+    categories.forEach(cat => {
+      const icon = categoryIcons[cat] || 'fa-utensils';
+      html += `<button class="btn btn-sm btn-outline-primary ${currentFilter === cat ? 'active' : ''}" data-category="${cat}">
+        <i class="fas ${icon} me-1"></i>${cat.charAt(0).toUpperCase() + cat.slice(1)}
+      </button>`;
+    });
+
+    filtersDiv.innerHTML = html;
+
+    // Add click handlers
+    filtersDiv.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentFilter = btn.dataset.category;
+        filtersDiv.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        displayFilteredMenu(currentFilter);
+      });
+    });
+  }
+
+  // Display filtered menu items
+  function displayFilteredMenu(filter) {
+    const filteredItems = filter === 'all' 
+      ? allMenuItems 
+      : allMenuItems.filter(item => item.categoryId === filter);
+
+    const rows = filteredItems.map(m => {
+      const imageHtml = m.imageUrl
+        ? `<img src="${m.imageUrl}" class="menu-item-image" alt="${m.name}">`
+        : `<div style="width:60px;height:60px;background:#f0f0f0;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#999;"><i class="fas fa-camera"></i></div>`;
+
+      return `
+        <tr>
+          <td>${imageHtml}</td>
+          <td class="ellipsis"><strong>${m.name}</strong></td>
+          <td><span class="badge bg-secondary">${m.categoryId || '-'}</span></td>
+          <td class="text-end">${toRM(Number(m.price) || 0)}</td>
+          <td>${m.isAvailable ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>'}</td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-primary"
+              data-id="${m.id}"
+              data-name="${m.name}"
+              data-price="${m.price}"
+              data-cat="${m.categoryId}"
+              data-image="${m.imageUrl || ''}"
+              data-active="${m.isAvailable}"
+              data-act="edit">
+              <i class="fas fa-edit"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+
+    menuTbody.innerHTML = rows.join("") || '<tr><td colspan="6" class="text-center py-4 text-muted">No items in this category.</td></tr>';
+  }
+
+  // Add item
+  addMenuBtn.addEventListener('click', async () => {
+    if (!IS_ADMIN) {
+      alert('Admin only.');
+      return;
+    }
+
+    const name = mName.value.trim();
+    const priceVal = parseFloat(mPrice.value);
+    const category = mCat.value.trim();
+    const active = mActive.checked;
+
+    if (!name) {
+      alert('Please enter item name');
+      return;
+    }
+
+    addMenuBtn.disabled = true;
+    addMenuBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+
+    try {
+      const ref = await addDoc(rcol("menuItems"), {
+        name,
+        price: priceVal,
+        categoryId: (category || "").toLowerCase(),
+        isAvailable: active,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      if (selectedImageFile) {
+        const imageUrl = await uploadImage(selectedImageFile, ref.id);
+        await updateDoc(ref, { imageUrl, updatedAt: serverTimestamp() });
+      }
+
+      // Reset form
+      mName.value = '';
+      mPrice.value = '';
+      mCat.value = '';
+      mActive.checked = true;
+      selectedImageFile = null;
+      mImage.value = '';
+      imagePreview.innerHTML = `<div class="image-preview-placeholder"><i class="fas fa-camera fa-2x mb-2"></i><br><small>Click to upload image</small></div>`;
+      removeImageBtn.classList.add('d-none');
+
+      menuSavedMsg.classList.remove('d-none');
+      setTimeout(() => menuSavedMsg.classList.add('d-none'), 1200);
+      await loadMenu();
+    } catch (e) {
+      console.error("Firestore add error:", e);
+      alert(e.message);
+    } finally {
+      addMenuBtn.disabled = false;
+      addMenuBtn.innerHTML = '<i class="fas fa-plus me-2"></i>Add Item';
+    }
+  });
+
+  // Row actions
+  menuTbody.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button');
+    if (!btn || btn.getAttribute('data-act') !== 'edit') return;
+    if (!IS_ADMIN) {
+      alert('Admin only.');
+      return;
+    }
+
+    document.getElementById('editId').value = btn.dataset.id;
+    document.getElementById('editName').value = btn.dataset.name;
+    document.getElementById('editPrice').value = btn.dataset.price;
+    document.getElementById('editCat').value = btn.dataset.cat;
+    document.getElementById('editActive').checked = btn.dataset.active === 'true';
+    document.getElementById('editCurrentImage').value = btn.dataset.image || '';
+
+    editSelectedImageFile = null;
+    if (btn.dataset.image) {
+      editImagePreview.innerHTML = `<img src="${btn.dataset.image}" alt="Current image">`;
+      editRemoveImageBtn.classList.remove('d-none');
+    } else {
+      editImagePreview.innerHTML = `<div class="image-preview-placeholder"><i class="fas fa-camera fa-2x mb-2"></i><br><small>No image</small></div>`;
+      editRemoveImageBtn.classList.add('d-none');
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('editModal'));
+    modal.show();
+  });
+
+  refreshMenuBtn.addEventListener('click', loadMenu);
+
+  // Save button
+  document.getElementById('saveBtn').addEventListener('click', async () => {
+    const id = document.getElementById('editId').value;
+    const ref = rdoc("menuItems", id);
+    const currentImageUrl = document.getElementById('editCurrentImage').value;
+
+    const p = parseFloat(document.getElementById('editPrice').value);
+    const priceVal = Number.isNaN(p) ? 0 : p;
+
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+
+    try {
+      const updateData = {
+        name: document.getElementById('editName').value.trim(),
+        price: priceVal,
+        categoryId: document.getElementById('editCat').value.trim().toLowerCase(),
+        isAvailable: document.getElementById('editActive').checked,
+        updatedAt: serverTimestamp()
+      };
+
+      if (editSelectedImageFile === 'DELETE') {
+        if (currentImageUrl) {
+          await deleteImage(currentImageUrl);
+        }
+        updateData.imageUrl = null;
+      } else if (editSelectedImageFile) {
+        if (currentImageUrl) {
+          await deleteImage(currentImageUrl);
+        }
+        const newImageUrl = await uploadImage(editSelectedImageFile, id);
+        updateData.imageUrl = newImageUrl;
+      }
+
+      await updateDoc(ref, updateData);
+      bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+      await loadMenu();
+    } catch (error) {
+      console.error('Error updating item:', error);
+      alert('Error: ' + error.message);
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save';
+    }
+  });
+
+  // Delete button
+  document.getElementById('deleteBtn').addEventListener('click', async () => {
+    const id = document.getElementById('editId').value;
+    const currentImageUrl = document.getElementById('editCurrentImage').value;
+    const ref = rdoc("menuItems", id);
+
+    if (confirm("Delete this item?")) {
+      try {
+        if (currentImageUrl) {
+          await deleteImage(currentImageUrl);
+        }
+        await deleteDoc(ref);
+        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+        await loadMenu();
+      } catch (error) {
+        console.error('Error deleting item:', error);
+        alert('Error: ' + error.message);
+      }
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+name,categoryId,price_rm
+Bihun Sup Daging Biasa,sup,9
+Bihun Sup Daging Selambak,sup,13
+Bihun Sup Urat Keting,sup,15
+Bihun Sup Campur,sup,15
+Kueyteow Sup Daging Biasa,sup,9
+Kueyteow Sup Daging Selambak,sup,13
+Kueyteow Sup Urat Keting,sup,15
+Kueyteow Sup Campur,sup,15
+Mee Sup Daging Biasa,sup,9
+Mee Sup Daging Selambak,sup,13
+Mee Sup Urat Keting,sup,15
+Mee Sup Campur,sup,15
+Sup Daging Biasa,sup,9
+Sup Daging Selambak,sup,13
+Sup Urat Keting,sup,16
+Sup Campur,sup,16
+Nasi Goreng Daging,goreng2,8
+Nasi Goreng KG Daging,goreng2,8
+Nasi Goreng Ayam,goreng2,7
+Nasi Goreng KG Ayam,goreng2,7
+Nasi Goreng Cina Daging,goreng2,8
+Nasi Goreng Cina Ayam,goreng2,7
+Nasi Goreng Ikan Masin,goreng2,7
+Nasi Goreng Urat Keting,goreng2,13
+Bihun Goreng Daging,goreng2,8
+Bihun Goreng KG Daging,goreng2,7
+Mee Goreng Daging,goreng2,8
+Mee Goreng Ayam,goreng2,7
+Kueteow Goreng Daging,goreng2,8
+Kueteow Goreng Ayam,goreng2,7
+Teh Ais,drinking,2.5
+Teh O Ais Limau,drinking,2.5
+Kopi Ais,drinking,2.5
+Kopi O Ais,drinking,2.5
+Nescafe Ais,drinking,3
+Nescafe O Ais,drinking,2.5
+Neslo Ais,drinking,3
+Milo Ais,drinking,3.5
+Milo O Ais,drinking,3
+Milo Tabur,drinking,3.5
+Sirap Ais,drinking,2.5
+Sirap Limau Ais,drinking,2.5
+Sirap Bandung Ais,drinking,3
+Limau Ais,drinking,2.5
+Extra Joss Anggur,drinking,3.5
+Extra Joss Mangga,drinking,3.5
+Air Yang Bergula,drinking,2.5
+Air Yang Bersusu,drinking,3.5
+Air Panas,drinking,2
+Nasi Putih,goreng2,2
+Telur Dadar,goreng2,2

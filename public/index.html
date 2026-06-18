@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bihun Sup Daging Selambak — Staff Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --kedah-green: #2d5016; /* Hijau Kedah gelap */
+      --kedah-light: #4a7c23; /* Hijau Kedah cerah */
+      --kedah-yellow: #f5c518; /* Kuning padi */
+      --bg-light: #f8faf7;
+      --text-main: #1a1a1a;
+      --text-muted: #5a6c57;
+      --white: #ffffff;
+    }
+
+    
+    * {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: #e8f5e9;
+      background-image: radial-gradient(var(--kedah-green) 0.5px, transparent 0.5px);
+      background-size: 24px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 42px;
+      overflow-x: hidden;
+    }
+
+    .login-container {
+      display: flex;
+      flex-direction: row;
+      max-width: 1460px;
+      width: 100%;
+      min-height: 760px;
+      background: transparent;
+      border-radius: 24px;
+      overflow: hidden;
+      align-items: stretch;
+      gap: 0;
+    }
+
+    /* Left Side: Branding */
+    .brand-side {
+      flex: 1.08;
+      min-width: 560px;
+      background: url('./assets/images/bihun_sup.jpeg');
+      background-size: cover;
+      background-position: center;
+      padding: 72px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      color: var(--white);
+      position: relative;
+      border-radius: 24px 0 0 24px;
+      overflow: hidden;
+    }
+
+    .brand-side::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,0.0) 10%, rgba(45,80,22,0.86) 70%);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .brand-side > * {
+      position: relative;
+      z-index: 2;
+    }
+
+    .logo-badge {
+      width: 64px;
+      height: 64px;
+      background: rgba(245,197,24,0.12);
+      backdrop-filter: blur(6px);
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin-bottom: 18px;
+      border: 2px solid rgba(245,197,24,0.15);
+      z-index: 2;
+    }
+
+    .brand-title {
+      font-size: 56px;
+      font-weight: 900;
+      line-height: 1.04;
+      margin-bottom: 14px;
+      letter-spacing: -1px;
+      color: var(--white);
+      z-index: 2;
+      text-shadow: 0 8px 20px rgba(13,30,8,0.5);
+    }
+
+    .brand-subtitle {
+      font-size: 20px;
+      opacity: 0.95;
+      line-height: 1.4;
+      margin-bottom: 10px;
+      color: rgba(255,255,255,0.9);
+      z-index: 2;
+    }
+
+    .feature-tags {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 18px;
+      position: absolute;
+      bottom: 38px;
+      left: 54px;
+      z-index: 2;
+    }
+
+    .tag {
+      background: rgba(255,255,255,0.06);
+      padding: 12px 24px;
+      border-radius: 999px;
+      font-size: 16px;
+      font-weight: 800;
+      color: rgba(255,255,255,0.95);
+      border: 1px solid rgba(255,255,255,0.06);
+      backdrop-filter: blur(6px);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .tag svg {
+      width: 28px;
+      height: 28px;
+      stroke: currentColor;
+      flex: 0 0 auto;
+    }
+
+    /* Right Side: Form */
+    .form-side {
+      flex: 0.92;
+      max-width: 620px;
+      width: 100%;
+      background: var(--white);
+      padding: 86px 88px;
+      border-radius: 0 24px 24px 0;
+      margin: 0;
+      box-shadow: 0 14px 40px rgba(10,30,10,0.08);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 12px;
+      z-index: 3;
+    }
+
+    .form-header {
+      text-align: center;
+      margin-bottom: 34px;
+    }
+
+    .form-header h2 {
+      font-weight: 800;
+      color: var(--kedah-green);
+      font-size: 30px;
+      margin-bottom: 14px;
+    }
+
+    .portal-mark {
+      width: 76px;
+      height: 76px;
+      margin: 0 auto 18px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 25%, #4e7c26, var(--kedah-green));
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 14px 28px rgba(45, 80, 22, 0.2);
+    }
+
+    .portal-mark svg {
+      width: 42px;
+      height: 42px;
+      stroke: currentColor;
+    }
+
+    .leaf-divider {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+      color: var(--kedah-light);
+      max-width: 230px;
+      margin: 0 auto;
+    }
+
+    .leaf-divider::before,
+    .leaf-divider::after {
+      content: "";
+      height: 1px;
+      background: currentColor;
+      opacity: 0.7;
+    }
+
+    .leaf-divider svg {
+      width: 24px;
+      height: 24px;
+      stroke: currentColor;
+    }
+
+    .form-group {
+      margin-bottom: 34px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-control, .form-select {
+      width: 100%;
+      min-height: 66px;
+      padding: 18px 22px 18px 68px; /* left space for icon, right for eye */
+      background: var(--white);
+      border: 2px solid rgba(74,124,35,0.12);
+      border-radius: 999px;
+      font-size: 20px;
+      transition: all 0.18s ease;
+      box-shadow: inset 0 1px 0 rgba(0,0,0,0.02);
+    }
+
+    .form-control:focus, .form-select:focus {
+      outline: none;
+      background: var(--white);
+      border-color: var(--kedah-light);
+      box-shadow: 0 0 0 4px rgba(74, 124, 35, 0.1);
+    }
+
+    .password-wrapper {
+      position: relative;
+    }
+
+    .input-with-icon { position: relative; }
+    .input-icon-left {
+      position: absolute;
+      left: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 24px; height: 24px;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--kedah-light);
+      pointer-events: none;
+    }
+
+
+    .password-toggle {
+      position: absolute;
+      right: 22px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      width: 38px;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border-radius: 8px;
+      color: var(--kedah-light);
+      cursor: pointer;
+    }
+    .password-toggle:hover,
+    .password-toggle:focus-visible {
+      background: rgba(74,124,35,0.1);
+      outline: none;
+    }
+    .password-toggle svg { width:22px; height:22px; display:block; stroke:var(--kedah-light); }
+    .password-toggle .eye-off { display:none; }
+    .password-toggle[data-hidden="false"] .eye-on { display:none; }
+    .password-toggle[data-hidden="false"] .eye-off { display:block; }
+    /* hide visible text label to make toggle icon-only */
+    /* icon-only toggle */
+
+    .btn-login {
+      width: 100%;
+      height: 70px;
+      padding: 0 28px;
+      background: linear-gradient(180deg, var(--kedah-light), var(--kedah-green));
+      color: white;
+      border: none;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 22px;
+      letter-spacing: 0.6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 28px;
+      box-shadow: 0 18px 34px rgba(45,80,22,0.28);
+      transition: transform 0.16s, box-shadow 0.16s;
+    }
+
+    .btn-login:hover { transform: translateY(-3px); box-shadow: 0 18px 40px rgba(45,80,22,0.24); }
+
+    .remember-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    .remember-row input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      appearance: none;
+      border: 2px solid rgba(74,124,35,0.25);
+      border-radius: 6px;
+      display: inline-block;
+      position: relative;
+      background: white;
+    }
+    .remember-row input[type="checkbox"]:checked {
+      background: linear-gradient(180deg, var(--kedah-light), var(--kedah-green));
+      border-color: var(--kedah-green);
+    }
+    .remember-row input[type="checkbox"]:checked::after {
+      content: '\2713';
+      color: white;
+      position: absolute;
+      left: 3px; top: 0px; font-size: 14px;
+    }
+
+    .alert-box {
+      padding: 12px 16px;
+      background: #fee2e2;
+      border-left: 4px solid #ef4444;
+      color: #b91c1c;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .alert-box.show { display: block; }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+    .spinner.show { display: block; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* footer removed per user request */
+
+    /* Responsive breakpoints: desktop -> tablet -> mobile */
+    @media (max-width: 1200px) {
+      .login-container { max-width: 900px; }
+      .brand-side { padding: 48px; }
+      .form-side { max-width: 540px; padding: 40px; }
+    }
+
+    @media (max-width: 980px) {
+      body {
+        align-items: flex-start;
+        padding: 18px 14px;
+      }
+      .login-container {
+        flex-direction: column;
+        max-width: 520px;
+        min-height: 0;
+        overflow: visible;
+      }
+      .brand-side {
+        flex: none;
+        min-width: 0;
+        width: 100%;
+        min-height: 300px;
+        height: auto;
+        padding: 28px;
+        border-radius: 18px;
+      }
+      .brand-title { font-size: 32px; }
+      .feature-tags { display: none; }
+      .form-side {
+        max-width: none;
+        width: calc(100% - 28px);
+        margin: -54px auto 0;
+        padding: 22px;
+        border-radius: 16px;
+      }
+
+      /* input/icon adjustments for smaller screens */
+      .input-icon-left { left: 12px; width: 18px; height: 18px; }
+      .form-control, .form-select { padding-left: 48px; padding-right: 48px; }
+      .password-toggle { right: 12px; width: 30px; height: 30px; }
+      .password-toggle svg { width:18px; height:18px; }
+      .btn-login { height: 52px; font-size: 16px; }
+      .btn-login svg { width: 20px; height: 20px; }
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 12px; }
+      .brand-side { min-height: 260px; padding: 20px; }
+      .brand-title { font-size: 26px; line-height: 1.08; }
+      .brand-subtitle { font-size: 14px; }
+      .form-side { width: calc(100% - 16px); margin-top: -42px; padding: 18px 16px; }
+      .form-header h2 { font-size: 24px; }
+      .portal-mark { width: 62px; height: 62px; margin-bottom: 12px; }
+      .portal-mark svg { width: 34px; height: 34px; }
+      .leaf-divider { max-width: 190px; }
+      .form-group { margin-bottom: 14px; }
+      .remember-row { margin-bottom: 16px; }
+      .form-control, .form-select { padding: 12px 14px 12px 48px; font-size: 15px; }
+      .input-icon-left { left: 12px; }
+      .password-toggle { right: 10px; }
+      .btn-login { height: 48px; font-size: 15px; }
+      .btn-login svg { width: 18px; height: 18px; }
+    }
+
+    @media (max-width: 360px) {
+      .brand-title { font-size: 23px; }
+      .form-side { width: 100%; padding: 16px 14px; }
+      .form-control, .form-select { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-container">
+  <div class="brand-side">
+    <h1 class="brand-title">Bihun Sup Daging Selambak</h1>
+    <p class="brand-subtitle">Staff Only</p>
+    <div class="feature-tags">
+      <span class="tag">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="6" r="3" stroke-width="1.6"/>
+          <path d="M7 21v-5a5 5 0 0110 0v5" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M5 21h14" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        Waiter
+      </span>
+      <span class="tag">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 14a8 8 0 0116 0" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M3 14h18M5 17h14" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M12 6V4" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        Kitchen Display
+      </span>
+      <span class="tag">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="4" y="6" width="16" height="13" rx="2" stroke-width="1.6"/>
+          <path d="M7 10h10M8 14h2M12 14h2M16 14h1" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        Cashier
+      </span>
+    </div>
+  </div>
+
+  <div class="form-side">
+    <div class="form-header">
+      <div class="portal-mark" aria-hidden="true">
+        <svg viewBox="0 0 64 64" fill="none">
+          <path d="M16 31h32v4a16 16 0 01-32 0v-4Z" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M21 31v-4h22v4" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M20 45h24" stroke-width="3" stroke-linecap="round"/>
+          <path d="M24 21c-2-3 2-4 0-7M32 21c-2-3 2-4 0-7M40 21c-2-3 2-4 0-7" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M47 28l5-3M17 28l-5-3" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h2>Staff Portal</h2>
+      <div class="leaf-divider" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M19 5c-7.5.2-11.8 4-12 12 8-.2 11.8-4.5 12-12Z" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M7 17l8-8" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <div id="alert" class="alert-box"></div>
+
+    <div class="form-group">
+      <label for="email">E-mel</label>
+      <div class="input-with-icon">
+        <span class="input-icon-left" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 8.5v7a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 7l-9 6-9-6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <input id="email" type="email" class="form-control" placeholder="staff@selambak.com" autocomplete="username" />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="password">Kata Laluan</label>
+      <div class="password-wrapper input-with-icon">
+        <span class="input-icon-left" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="10" width="18" height="11" rx="2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 10V8a5 5 0 0110 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <input id="password" type="password" class="form-control" placeholder="••••••••" autocomplete="current-password" />
+        <button id="togglePwd" type="button" class="password-toggle" aria-pressed="false" aria-label="Tunjuk kata laluan" data-hidden="true">
+          <!-- eye (visible when password hidden) -->
+          <svg class="eye-on" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <!-- eye-off (visible when password shown) -->
+          <svg class="eye-off" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M3 3l18 18" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.94 17.94A10.95 10.95 0 0112 19c-6 0-10-7-10-7 .99-1.7 2.46-3.2 4.25-4.35" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          
+        </button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="roleSelect">Peranan (Role)</label>
+      <div class="input-with-icon">
+        <span class="input-icon-left" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 20v-1a6 6 0 0116 0v1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <select id="roleSelect" class="form-select">
+        <option value="admin">Admin</option>
+        <option value="receptionist">Cashier</option>
+        <option value="waiter">Waiter</option>
+        <option value="kitchen">Kitchen</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="remember-row">
+      <input type="checkbox" id="rememberMe" checked>
+      <label for="rememberMe" style="font-size: 14px; color: var(--text-muted); cursor: pointer;">Ingat saya</label>
+    </div>
+
+    <button id="loginBtn" class="btn-login">
+      <div id="spinner" class="spinner"></div>
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width="22" height="22">
+        <path d="M10 7l5 5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M14 4h4a3 3 0 013 3v10a3 3 0 01-3 3h-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span>LOG MASUK</span>
+    </button>
+
+    <!-- footer removed per user request -->
+  </div>
+</div>
+
+<script>
+  const passwordInput = document.getElementById('password');
+  const passwordToggle = document.getElementById('togglePwd');
+
+  function renderPasswordToggle() {
+    if (!passwordInput || !passwordToggle) return;
+    const hidden = passwordInput.type === 'password';
+    passwordToggle.dataset.hidden = hidden ? 'true' : 'false';
+    passwordToggle.setAttribute('aria-pressed', hidden ? 'false' : 'true');
+    passwordToggle.setAttribute('aria-label', hidden ? 'Tunjuk kata laluan' : 'Sembunyikan kata laluan');
+  }
+
+  function togglePasswordVisibility() {
+    if (!passwordInput) return;
+    passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
+    renderPasswordToggle();
+    passwordInput.focus();
+  }
+
+  if (passwordToggle) {
+    passwordToggle.addEventListener('click', togglePasswordVisibility);
+    renderPasswordToggle();
+  }
+</script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth,
+    signInWithEmailAndPassword,
+    setPersistence,
+    browserSessionPersistence,
+    browserLocalPersistence,
+    onAuthStateChanged,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { firebaseConfig } from "./js/firebase-config.esm.js";
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const emailEl = document.getElementById('email');
+  const passEl = document.getElementById('password');
+  const roleEl = document.getElementById('roleSelect');
+  const alertEl = document.getElementById('alert');
+  const btn = document.getElementById('loginBtn');
+  const spinEl = document.getElementById('spinner');
+  const rememberEl = document.getElementById('rememberMe');
+
+  const routeMap = {
+    admin: "admin.html",
+    receptionist: "reception.html",
+    waiter: "order.html",
+    kitchen: "kds.html",
+  };
+
+  function showAlert(msg){ alertEl.textContent = msg; alertEl.classList.add('show'); }
+  function hideAlert(){ alertEl.classList.remove('show'); }
+
+  async function getUserRole(uid){
+    const snap = await getDoc(doc(db, "roles", uid));
+    if (!snap.exists()) throw new Error("Akaun anda tiada peranan yang didaftarkan.");
+    return String(snap.data().role || "").toLowerCase();
+  }
+
+  async function redirectByRole(uid){
+    const realRole = await getUserRole(uid);
+    const dest = routeMap[realRole];
+    if (!dest) throw new Error(`Peranan "${realRole}" tidak diketahui.`);
+    window.location.href = dest;
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) return;
+    const uid = user.uid;
+    const roleSnap = await getDoc(doc(db, "roles", uid));
+    const role = roleSnap.data()?.role || "";
+    if (role === "admin") return;
+    await redirectByRole(uid);
+  });
+
+  // Login Handler
+  btn.addEventListener('click', async () => {
+    hideAlert();
+    btn.disabled = true; spinEl.classList.add('show');
+
+    const email = emailEl.value.trim();
+    const pass = passEl.value;
+    const chosenRole = roleEl.value;
+    const remember = rememberEl.checked;
+
+    try {
+      await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
+      const cred = await signInWithEmailAndPassword(auth, email, pass);
+      const realRole = await getUserRole(cred.user.uid);
+
+      if (chosenRole && chosenRole !== realRole) {
+        showAlert(`Akaun ini adalah peranan "${realRole}". Menghala ke halaman yang betul...`);
+      }
+
+      if (realRole === "admin" && chosenRole === "kitchen") {
+        window.location.href = "kds.html";
+        return;
+      }
+
+      await redirectByRole(cred.user.uid);
+    } catch (e) {
+      showAlert("Gagal log masuk: E-mel atau kata laluan salah.");
+      try { await signOut(auth); } catch {}
+    } finally {
+      btn.disabled = false; spinEl.classList.remove('show');
+    }
+  });
+</script>
+
+</body>
+</html>

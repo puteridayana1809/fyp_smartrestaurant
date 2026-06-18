@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Staff Attendance — Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-yellow: #F5C518;
+      --kedah-green: #2d5016;
+      --kedah-light: #4a7c23;
+      --card-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    * { box-sizing: border-box; }
+    body { background:#f7f9fc; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; margin:0; padding:0; }
+    
+    /* SIDEBAR */
+    .sidebar { position:fixed; left:0; top:0; bottom:0; width:260px; background:linear-gradient(180deg, #2d5016 0%, #3a6319 100%); color:#fff; padding:20px; transition:transform 0.3s ease-in-out; z-index:1000; border-right: 2px solid #4a7c23; display:flex; flex-direction:column; overflow-y:auto; }
+    .sidebar.closed { transform:translateX(-100%); }
+    .sidebar-handle { position:fixed; top:50%; left:260px; transform:translateY(-50%); background:#2d5016; color:#fff; border:none; padding:6px 10px; border-radius:0 6px 6px 0; cursor:pointer; transition:left 0.3s ease-in-out; z-index:1100; }
+    .sidebar.closed + .sidebar-handle { left:0; }
+    .sidebar-brand { display:flex; align-items:center; gap:12px; padding:16px 12px; margin-bottom:24px; }
+    .brand-logo { width:56px; height:56px; background:linear-gradient(135deg, #2d5016 0%, #4a7c23 100%); border-radius:50%; display:flex; align-items:center; justify-content:center; border:3px solid var(--primary-yellow); flex-shrink:0; }
+    .brand-logo i { color:var(--primary-yellow); font-size:24px; }
+    .brand-text h4 { margin:0; font-size:1rem; font-weight:700; color:#ffffff; line-height:1.2; }
+    .brand-text .brand-tag { display:inline-block; background:var(--primary-yellow); color:#000; font-size:0.65rem; font-weight:700; padding:2px 8px; border-radius:20px; margin-top:4px; }
+    .sidebar-nav { flex:1; }
+    .sidebar a, .sidebar .menu-toggle { display:flex; align-items:center; gap:12px; color:rgba(255, 255, 255, 0.85) !important; text-decoration:none; padding:12px 14px; border-radius:10px; margin-bottom:4px; font-weight:500; font-size:0.95rem; transition:all 0.2s ease; }
+    .sidebar a i, .sidebar .menu-toggle i { width:20px; text-align:center; font-size:1rem; }
+    .sidebar a.active { background:rgba(245, 197, 24, 0.2); color:#fff !important; border:1px solid var(--primary-yellow); }
+    .sidebar a.active i { color:var(--primary-yellow); }
+    .sidebar a:hover:not(.active) { background:rgba(255, 255, 255, 0.1); color:#fff !important; }
+    .sidebar .menu-toggle { cursor:pointer; justify-content:space-between; }
+    .sidebar .menu-toggle:hover { background:rgba(255, 255, 255, 0.1); }
+    .sidebar .menu-toggle .arrow { transition:transform 0.3s ease; font-size:0.7rem; }
+    .sidebar .menu-toggle.collapsed .arrow { transform:rotate(-90deg); }
+    .sidebar .submenu { margin-left:20px; padding-left:12px; border-left:2px solid rgba(255, 255, 255, 0.3); }
+    .sidebar .submenu a { font-size:0.9rem; padding:10px 14px; }
+    .sidebar-footer { border-top:1px solid rgba(255, 255, 255, 0.2); padding-top:16px; margin-top:auto; }
+    .user-info { display:flex; align-items:center; gap:12px; padding:12px; background:rgba(255, 255, 255, 0.1); border-radius:12px; margin-bottom:12px; }
+    .user-avatar { width:42px; height:42px; background:var(--primary-yellow); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:#1a1a1a; }
+    .user-details { flex:1; }
+    .user-details .name { font-weight:600; font-size:0.9rem; color:#ffffff; }
+    .user-details .role { font-size:0.75rem; color:rgba(255, 255, 255, 0.7); }
+    
+    /* CONTENT */
+    .content { margin-left:260px; padding:24px 32px; transition:margin-left 0.3s ease-in-out; min-height:100vh; }
+    .content.full { margin-left:0; }
+    
+    /* PAGE HEADER */
+    .page-header { margin-bottom:28px; }
+    .page-header h2 { margin:0; font-size:1.6rem; font-weight:600; color:#1a1a1a; }
+    .page-header p { color:#64748b; margin:4px 0 0; }
+    
+    /* CARDS */
+    .section-card { background:white; border-radius:16px; box-shadow:var(--card-shadow); overflow:hidden; margin-bottom:24px; }
+    .section-header { background:linear-gradient(135deg, var(--kedah-green), var(--kedah-light)); color:white; padding:1rem 1.25rem; font-size:1rem; font-weight:700; display:flex; align-items:center; gap:10px; }
+    .section-header i { color:var(--primary-yellow); }
+    .section-body { padding:1.5rem; }
+    
+    /* STATS CARDS */
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:16px; margin-bottom:24px; }
+    .stat-card { background:white; border-radius:12px; padding:20px; box-shadow:var(--card-shadow); border-left:4px solid var(--kedah-green); }
+    .stat-card.yellow { border-left-color:var(--primary-yellow); }
+    .stat-card.red { border-left-color:#ef4444; }
+    .stat-card.blue { border-left-color:#3b82f6; }
+    .stat-card.purple { border-left-color:#8b5cf6; }
+    .stat-value { font-size:1.6rem; font-weight:700; color:var(--kedah-green); }
+    .stat-label { font-size:0.85rem; color:#64748b; }
+    
+    /* ATTENDANCE TABLE */
+    .attendance-table { width:100%; border-collapse:collapse; }
+    .attendance-table th { background:#f8faf7; color:var(--kedah-green); font-weight:600; padding:12px 16px; text-align:left; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.5px; }
+    .attendance-table td { padding:12px 16px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+    .attendance-table tr:hover { background:#f8faf7; }
+    
+    /* TIME BADGES */
+    .time-in { background:#dcfce7; color:#16a34a; padding:4px 10px; border-radius:6px; font-weight:600; font-size:0.85rem; }
+    .time-out { background:#fee2e2; color:#dc2626; padding:4px 10px; border-radius:6px; font-weight:600; font-size:0.85rem; }
+    .time-pending { background:#fef3c7; color:#d97706; padding:4px 10px; border-radius:6px; font-weight:600; font-size:0.85rem; }
+    .hours-badge { background:var(--kedah-green); color:white; padding:4px 10px; border-radius:6px; font-weight:600; font-size:0.85rem; }
+    
+    /* FILTERS */
+    .filter-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+    .filter-row .form-control, .filter-row .form-select { max-width:200px; border:2px solid #e5e7eb; border-radius:10px; }
+    .filter-row .form-control:focus, .filter-row .form-select:focus { border-color:var(--kedah-green); box-shadow:0 0 0 3px rgba(45, 80, 22, 0.1); }
+    
+    /* STAFF AVATAR */
+    .staff-avatar { width:36px; height:36px; border-radius:50%; background:#e5e7eb; display:flex; align-items:center; justify-content:center; color:#64748b; font-weight:600; font-size:0.9rem; }
+    .staff-avatar img { width:100%; height:100%; border-radius:50%; object-fit:cover; }
+    
+    /* BUTTONS */
+    .btn-kedah { background:linear-gradient(135deg, var(--kedah-green), var(--kedah-light)); color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:600; transition:all 0.3s; }
+    .btn-kedah:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(45, 80, 22, 0.3); color:white; }
+    .btn-outline-kedah { border:2px solid var(--kedah-green); color:var(--kedah-green); background:transparent; padding:8px 16px; border-radius:8px; font-weight:600; transition:all 0.2s; }
+    .btn-outline-kedah:hover { background:var(--kedah-green); color:white; }
+    
+    /* LIVE INDICATOR */
+    .live-indicator { display:inline-flex; align-items:center; gap:6px; background:#dcfce7; color:#16a34a; padding:6px 12px; border-radius:20px; font-weight:600; font-size:0.8rem; }
+    .live-dot { width:8px; height:8px; background:#16a34a; border-radius:50%; animation:pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity:1; } 50% { opacity:0.4; } }
+    
+    /* RESPONSIVE */
+    @media (max-width:1024px) {
+      .content { margin-left:0; padding:16px; }
+      .sidebar { transform:translateX(-100%); }
+      .sidebar.open { transform:translateX(0); }
+      .sidebar-handle { left:0; }
+      .sidebar.open + .sidebar-handle { left:260px; }
+    }
+    @media (max-width:768px) {
+      .stats-grid { grid-template-columns:1fr 1fr; }
+      .attendance-table { display:block; overflow-x:auto; }
+      .filter-row .form-control, .filter-row .form-select { max-width:100%; flex:1; }
+    }
+  </style>
+  <link rel="stylesheet" href="../css/admin-sidebar.css">
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo" aria-hidden="true">
+      <svg viewBox="0 0 64 64">
+        <path d="M18 8c1.2 0 2.1.9 2.1 2.1v17.4c0 1 .8 1.8 1.8 1.8h1.2V10.1c0-1.2.9-2.1 2.1-2.1s2.1.9 2.1 2.1v19.2h1.2c1 0 1.8-.8 1.8-1.8V10.1c0-1.2.9-2.1 2.1-2.1s2.1.9 2.1 2.1v18.4c0 5.7-3.8 10.5-9 11.9v14.4c0 1.7-1.4 3.2-3.2 3.2s-3.2-1.4-3.2-3.2V40.4c-5.2-1.4-9-6.2-9-11.9V10.1C15.9 8.9 16.8 8 18 8Z"/>
+        <path d="M48.3 7.8c-7.2 2.3-11.1 8.5-11.1 16.4v13.6c0 1.8 1.5 3.3 3.3 3.3h4.7v13.7c0 1.7 1.4 3.2 3.2 3.2s3.2-1.4 3.2-3.2V10.1c0-1.6-1.6-2.8-3.3-2.3Z"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <h4>Bihun Sup Daging<br>Selambak</h4>
+      <span class="brand-sub">Staff Portal</span>
+    </div>
+  </div>
+  
+  <nav class="sidebar-nav">
+    <a href="../admin.html">
+      <i class="fas fa-chart-pie"></i>
+      <span>Overview</span>
+    </a>
+    
+    <div class="menu-toggle" id="storeToggle">
+      <div class="d-flex align-items-center gap-2">
+        <i class="fas fa-store"></i>
+        <span>Store Management</span>
+      </div>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="submenu" id="storeSubmenu">
+      <a href="tablemanagement.html">
+        <i class="fas fa-chair"></i>
+        <span>Table Management</span>
+      </a>
+      <a href="menumanager.html">
+        <i class="fas fa-book"></i>
+        <span>Menu Management</span>
+      </a>
+    </div>
+    
+    <div class="menu-toggle" id="staffToggle">
+      <div class="d-flex align-items-center gap-2">
+        <i class="fas fa-users"></i>
+        <span>Staff Management</span>
+      </div>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="submenu" id="staffSubmenu">
+      <a href="staffmanagement.html">
+        <i class="fas fa-id-card"></i>
+        <span>Staff Directory</span>
+      </a>
+      <a href="staffattendance.html" class="active">
+        <i class="fas fa-clock"></i>
+        <span>Attendance</span>
+      </a>
+      <a href="staffpayroll.html">
+        <i class="fas fa-money-bill-wave"></i>
+        <span>Payroll</span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="user-avatar" id="userAvatar">A</div>
+      <div class="user-details">
+        <div class="name" id="whoami">Loading...</div>
+        <div class="role">Admin</div>
+      </div>
+    </div>
+    <button id="logoutBtn" class="btn btn-danger btn-sm w-100">
+      <i class="fas fa-sign-out-alt me-2"></i>Logout
+    </button>
+  </div>
+</div>
+
+<button id="sidebarHandle" class="sidebar-handle"><i class="fas fa-chevron-left"></i></button>
+
+<!-- MAIN CONTENT -->
+<div class="content" id="content">
+  <div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+      <h2><i class="fas fa-clock me-2" style="color:var(--kedah-green)"></i>Staff Attendance</h2>
+      <p>RFID-based clock in/out tracking system</p>
+    </div>
+    <div class="live-indicator">
+      <span class="live-dot"></span>
+      <span>LIVE</span>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value" id="clockedInNow">0</div>
+      <div class="stat-label">Currently Working</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-value" id="todayRecords">0</div>
+      <div class="stat-label">Today's Records</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-value" id="totalHoursToday">0</div>
+      <div class="stat-label">Total Hours Today</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-value" id="avgHoursToday">0</div>
+      <div class="stat-label">Avg Hours/Staff</div>
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filter-row">
+    <input type="date" class="form-control" id="filterDate">
+    <select class="form-select" id="filterStaff">
+      <option value="">All Staff</option>
+    </select>
+    <button class="btn btn-outline-kedah" id="refreshBtn">
+      <i class="fas fa-sync-alt me-2"></i>Refresh
+    </button>
+  </div>
+
+  <!-- ATTENDANCE RECORDS -->
+  <div class="section-card">
+    <div class="section-header">
+      <i class="fas fa-list-check"></i>
+      <span>Attendance Records</span>
+    </div>
+    <div class="section-body p-0">
+      <table class="attendance-table">
+        <thead>
+          <tr>
+            <th>Staff</th>
+            <th>RFID Card</th>
+            <th>Clock In</th>
+            <th>Clock Out</th>
+            <th>Hours Worked</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="attendanceBody">
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted">
+              <i class="fas fa-spinner fa-spin me-2"></i>Loading attendance data...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RECENT SCANS -->
+  <div class="section-card">
+    <div class="section-header">
+      <i class="fas fa-rss"></i>
+      <span>Recent RFID Scans (Live)</span>
+    </div>
+    <div class="section-body">
+      <div id="recentScans">
+        <p class="text-muted text-center">Waiting for RFID scans...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT ATTENDANCE MODAL -->
+<div class="modal fade" id="editAttendanceModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background: var(--kedah-green); color: white;">
+        <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Attendance Record</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editRfidUid">
+        <input type="hidden" id="editTimestampKey">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Staff Name</label>
+          <input type="text" class="form-control" id="editStaffName" disabled>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Date</label>
+          <input type="text" class="form-control" id="editDate" disabled>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label fw-semibold">Clock In Time</label>
+            <input type="time" class="form-control" id="editClockIn" step="1">
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label fw-semibold">Clock Out Time</label>
+            <input type="time" class="form-control" id="editClockOut" step="1">
+            <small class="text-muted">Leave empty if still working</small>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="saveAttendanceBtn">
+          <i class="fas fa-save me-2"></i>Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getDatabase, ref, onValue, get, update, set, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { firebaseConfig, RESTAURANT_ID } from "../js/firebase-config.esm.js";
+  import { setupAdminProfile } from "../js/admin-profile.esm.js";
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const rtdb = getDatabase(app);
+  const auth = getAuth(app);
+
+  let staffList = [];
+  let staffMap = new Map(); // RFID UID -> staff data
+  let attendanceData = {};
+  let recentScans = [];
+
+  // Auth check
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = "../index.html";
+      return;
+    }
+    document.getElementById('whoami').textContent = user.email;
+    setupAdminProfile(user);
+    await loadStaff();
+    listenToAttendance();
+  });
+
+  // Logout
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await signOut(auth);
+    window.location.href = "../index.html";
+  });
+
+  // Sidebar toggles
+  document.getElementById('sidebarHandle').addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('closed');
+    document.getElementById('content').classList.toggle('full');
+    const icon = document.querySelector('#sidebarHandle i');
+    icon.className = sidebar.classList.contains('closed') ? 'fas fa-chevron-right' : 'fas fa-chevron-left';
+  });
+
+  document.getElementById('storeToggle').addEventListener('click', function() {
+    this.classList.toggle('collapsed');
+    document.getElementById('storeSubmenu').style.display = this.classList.contains('collapsed') ? 'none' : 'block';
+  });
+
+  document.getElementById('staffToggle').addEventListener('click', function() {
+    this.classList.toggle('collapsed');
+    document.getElementById('staffSubmenu').style.display = this.classList.contains('collapsed') ? 'none' : 'block';
+  });
+
+  // Set default date filter to today
+  document.getElementById('filterDate').value = new Date().toISOString().split('T')[0];
+
+  // Load staff from Firestore
+  async function loadStaff() {
+    try {
+      const staffCol = collection(db, `restaurants/${RESTAURANT_ID}/staff`);
+      const snap = await getDocs(query(staffCol, orderBy('name')));
+      
+      staffList = [];
+      const filterSelect = document.getElementById('filterStaff');
+      filterSelect.innerHTML = '<option value="">All Staff</option>';
+      
+      snap.forEach(doc => {
+        const data = { id: doc.id, ...doc.data() };
+        staffList.push(data);
+        if (data.rfidUid) {
+          staffMap.set(data.rfidUid.toUpperCase(), data);
+        }
+        filterSelect.innerHTML += `<option value="${data.rfidUid}">${data.name}</option>`;
+      });
+      console.log('📋 Staff Map loaded:', staffMap);
+    } catch (err) {
+      console.error('Error loading staff:', err);
+    }
+  }
+
+  // Get staff name by RFID UID
+  function getStaffByRfid(uid) {
+    return staffList.find(s => s.rfidUid?.toUpperCase() === uid?.toUpperCase());
+  }
+
+  // Listen to RFID attendance from Realtime Database
+  function listenToAttendance() {
+    const attendanceRef = ref(rtdb, 'attendance');
+    onValue(attendanceRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        document.getElementById('attendanceBody').innerHTML = 
+          '<tr><td colspan="6" class="text-center py-4 text-muted">No attendance data found</td></tr>';
+        return;
+      }
+      
+      attendanceData = snapshot.val();
+      processAttendanceData();
+    });
+  }
+
+  // Process and display attendance data
+  function processAttendanceData() {
+    const filterDate = document.getElementById('filterDate').value;
+    const filterStaff = document.getElementById('filterStaff').value;
+    
+    const tbody = document.getElementById('attendanceBody');
+    let records = [];
+    let clockedInNow = 0;
+    let totalHours = 0;
+    let completedRecords = 0;
+
+    console.log('📊 Processing attendance data:', attendanceData);
+    console.log('📅 Filter date:', filterDate);
+
+    // Process attendance data from RTDB
+    // Structure: attendance/{rfidUid}/{timestampKey}/{ clockIn, clockOut, status }
+    Object.entries(attendanceData).forEach(([rfidUid, uidData]) => {
+      // Filter by staff if selected
+      if (filterStaff && rfidUid.toUpperCase() !== filterStaff.toUpperCase()) return;
+
+      // uidData bisa jadi object dengan nested timestamps
+      if (typeof uidData === 'object' && uidData !== null) {
+        Object.entries(uidData).forEach(([timestampKey, recData]) => {
+          // timestampKey format: "2026-01-10_18-31-09"
+          // Extract date from key
+          const keyDate = timestampKey.split('_')[0]; // "2026-01-10"
+          
+          console.log(`  🔍 Checking ${rfidUid}/${timestampKey}, keyDate: ${keyDate}, filterDate: ${filterDate}`);
+          
+          // Filter by date
+          if (filterDate && keyDate !== filterDate) return;
+
+          // Process the record
+          const record = processRecord(rfidUid, recData, timestampKey);
+          if (record) {
+            records.push(record);
+            if (record.isWorking) clockedInNow++;
+            if (record.hoursWorked > 0) {
+              totalHours += record.hoursWorked;
+              completedRecords++;
+            }
+          }
+        });
+      }
+    });
+
+    // Sort by clock in time (newest first)
+    records.sort((a, b) => new Date(b.clockInRaw || 0) - new Date(a.clockInRaw || 0));
+
+    console.log('✅ Total records found:', records.length);
+
+    // Update stats
+    document.getElementById('clockedInNow').textContent = clockedInNow;
+    document.getElementById('todayRecords').textContent = records.length;
+    document.getElementById('totalHoursToday').textContent = totalHours.toFixed(1);
+    document.getElementById('avgHoursToday').textContent = completedRecords > 0 ? (totalHours / completedRecords).toFixed(1) : '0';
+
+    // Render table
+    if (records.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No attendance records for selected date</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = records.map(rec => `
+      <tr>
+        <td>
+          <div class="d-flex align-items-center gap-2">
+            <div class="staff-avatar">
+              ${rec.photoUrl ? `<img src="${rec.photoUrl}" alt="${rec.staffName}">` : rec.staffName?.charAt(0) || '?'}
+            </div>
+            <div>
+              <div class="fw-semibold">${rec.staffName || 'Unknown'}</div>
+              <small class="text-muted">${rec.position || '-'}</small>
+            </div>
+          </div>
+        </td>
+        <td><code class="bg-light px-2 py-1 rounded">${rec.rfidUid}</code></td>
+        <td><span class="time-in"><i class="fas fa-sign-in-alt me-1"></i>${rec.clockIn}</span></td>
+        <td>${rec.clockOut ? `<span class="time-out"><i class="fas fa-sign-out-alt me-1"></i>${rec.clockOut}</span>` : '<span class="time-pending"><i class="fas fa-hourglass-half me-1"></i>Pending</span>'}</td>
+        <td>${rec.hoursWorked > 0 ? `<span class="hours-badge">${rec.hoursWorked.toFixed(2)} hrs</span>` : '-'}</td>
+        <td>${rec.isWorking ? '<span class="badge bg-success">Working</span>' : '<span class="badge bg-secondary">Completed</span>'}</td>
+        <td>
+          <div class="btn-group btn-group-sm">
+            ${rec.isWorking ? `<button class="btn btn-danger btn-clock-out" data-rfid="${rec.rfidUid}" data-key="${rec.timestampKey}" title="Clock Out">
+              <i class="fas fa-sign-out-alt"></i>
+            </button>` : ''}
+            <button class="btn btn-outline-primary btn-edit-attendance" 
+              data-rfid="${rec.rfidUid}" 
+              data-key="${rec.timestampKey}" 
+              data-name="${rec.staffName || ''}" 
+              data-clockin="${rec.clockIn || ''}" 
+              data-clockout="${rec.clockOut || ''}" 
+              title="Edit">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-outline-danger btn-delete-attendance" 
+              data-rfid="${rec.rfidUid}" 
+              data-key="${rec.timestampKey}" 
+              data-name="${rec.staffName || ''}" 
+              title="Delete">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+
+    // Update recent scans
+    updateRecentScans(records.slice(0, 5));
+  }
+
+  // Process individual attendance record
+  // New structure: attendance/{rfidUid}/{date}/ with clock_in, clock_out
+  function processRecord(rfidUid, data, dateKey) {
+    console.log(`    📝 Processing record for ${rfidUid} on ${dateKey}:`, data);
+
+    // New structure uses clock_in and clock_out (with underscore)
+    // Also support old structure with clockIn/clockOut
+    let clockInStr = data.clock_in || data.clockIn || '';
+    let clockOutStr = data.clock_out || data.clockOut || '';
+    
+    // Check if still working (no clock out)
+    const isWorking = clockInStr && !clockOutStr;
+
+    const staff = getStaffByRfid(rfidUid);
+    
+    // Display times - already in HH:MM:SS format from new structure
+    let clockInTime = clockInStr || 'N/A';
+    let clockOutTime = clockOutStr || null;
+    
+    // If old format with date prefix, extract time only
+    if (clockInStr && clockInStr.includes(' ')) {
+      clockInTime = clockInStr.split(' ')[1] || clockInStr;
+    }
+    if (clockOutStr && clockOutStr.includes(' ')) {
+      clockOutTime = clockOutStr.split(' ')[1] || clockOutStr;
+    }
+
+    // Calculate hours worked
+    let hoursWorked = 0;
+    if (clockInStr && clockOutStr) {
+      try {
+        // Build full datetime for calculation
+        const inDateTime = `${dateKey}T${clockInStr.includes(' ') ? clockInStr.split(' ')[1] : clockInStr}`;
+        const outDateTime = `${dateKey}T${clockOutStr.includes(' ') ? clockOutStr.split(' ')[1] : clockOutStr}`;
+        const inDate = new Date(inDateTime);
+        const outDate = new Date(outDateTime);
+        hoursWorked = (outDate - inDate) / (1000 * 60 * 60);
+        if (hoursWorked < 0 || isNaN(hoursWorked)) hoursWorked = 0;
+      } catch (e) {
+        hoursWorked = 0;
+      }
+    }
+
+    return {
+      rfidUid: rfidUid.toUpperCase(),
+      timestampKey: dateKey, // Now just date like "2026-01-10"
+      staffName: staff?.name || `Unknown (${rfidUid})`,
+      position: staff?.position || '',
+      photoUrl: staff?.photoUrl || '',
+      clockIn: clockInTime,
+      clockOut: clockOutTime,
+      clockInRaw: clockInStr,
+      hoursWorked,
+      isWorking
+    };
+  }
+
+  // Update recent scans display
+  function updateRecentScans(records) {
+    const container = document.getElementById('recentScans');
+    if (records.length === 0) {
+      container.innerHTML = '<p class="text-muted text-center">No recent scans</p>';
+      return;
+    }
+
+    container.innerHTML = records.map(rec => `
+      <div class="d-flex align-items-center gap-3 p-2 border-bottom">
+        <div class="staff-avatar">
+          ${rec.photoUrl ? `<img src="${rec.photoUrl}">` : rec.staffName?.charAt(0) || '?'}
+        </div>
+        <div class="flex-grow-1">
+          <div class="fw-semibold">${rec.staffName}</div>
+          <small class="text-muted">${rec.rfidUid}</small>
+        </div>
+        <div class="text-end">
+          <div class="${rec.isWorking ? 'text-success' : 'text-secondary'}">
+            <i class="fas fa-${rec.isWorking ? 'sign-in-alt' : 'sign-out-alt'} me-1"></i>
+            ${rec.isWorking ? rec.clockIn : rec.clockOut}
+          </div>
+          <small class="text-muted">${rec.isWorking ? 'Clocked In' : 'Clocked Out'}</small>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Clock Out Staff - Manual button
+  window.clockOutStaff = async function(rfidUid, dateKey) {
+    if (!confirm('Confirm clock out for this staff?')) return;
+
+    try {
+      // Get current time for clock out (just time, not date)
+      const now = new Date();
+      const clockOutTime = now.toTimeString().slice(0, 8); // "HH:MM:SS"
+      
+      // Update Firebase RTDB with new field name
+      const recordRef = ref(rtdb, `attendance/${rfidUid}/${dateKey}`);
+      await update(recordRef, {
+        clock_out: clockOutTime
+      });
+
+      alert('✅ Clock out successful!');
+      processAttendanceData(); // Refresh table
+    } catch (error) {
+      console.error('Clock out error:', error);
+      alert('❌ Error: ' + error.message);
+    }
+  };
+
+  // Edit Attendance Modal
+  const editModal = new bootstrap.Modal(document.getElementById('editAttendanceModal'));
+  
+  window.editAttendance = function(rfidUid, dateKey, staffName, clockIn, clockOut) {
+    console.log('🔍 Edit Attendance:', { rfidUid, dateKey, staffName, clockIn, clockOut });
+    
+    document.getElementById('editRfidUid').value = rfidUid;
+    document.getElementById('editTimestampKey').value = dateKey;
+    document.getElementById('editStaffName').value = staffName;
+    
+    // Format date for better display (e.g., "2026-01-12" → "12 Jan 2026")
+    try {
+      const date = new Date(dateKey + 'T00:00:00');
+      const formattedDate = date.toLocaleDateString('en-GB', { 
+        day: '2-digit', 
+        month: 'short', 
+        year: 'numeric' 
+      });
+      document.getElementById('editDate').value = formattedDate;
+    } catch (e) {
+      document.getElementById('editDate').value = dateKey;
+    }
+    
+    document.getElementById('editClockIn').value = clockIn || '';
+    document.getElementById('editClockOut').value = clockOut || '';
+    editModal.show();
+  };
+
+  // Save Attendance Changes
+  document.getElementById('saveAttendanceBtn').addEventListener('click', async () => {
+    const rfidUid = document.getElementById('editRfidUid').value;
+    const dateKey = document.getElementById('editTimestampKey').value;
+    const clockIn = document.getElementById('editClockIn').value;
+    const clockOut = document.getElementById('editClockOut').value;
+
+    if (!clockIn) {
+      alert('⚠️ Clock In time is required');
+      return;
+    }
+
+    // Validate clock out is after clock in
+    if (clockOut && clockIn) {
+      const inTime = new Date(`2000-01-01T${clockIn}`);
+      const outTime = new Date(`2000-01-01T${clockOut}`);
+      
+      if (outTime <= inTime) {
+        alert('⚠️ Clock Out time must be after Clock In time');
+        return;
+      }
+    }
+
+    const saveBtn = document.getElementById('saveAttendanceBtn');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+
+    try {
+      const recordRef = ref(rtdb, `attendance/${rfidUid}/${dateKey}`);
+      const updateData = {
+        clock_in: clockIn
+      };
+      
+      if (clockOut) {
+        updateData.clock_out = clockOut;
+      } else {
+        updateData.clock_out = null;
+      }
+
+      await update(recordRef, updateData);
+      
+      editModal.hide();
+      alert('✅ Attendance record updated successfully!');
+      processAttendanceData();
+    } catch (error) {
+      console.error('Edit error:', error);
+      alert('❌ Error updating record: ' + error.message);
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = originalText;
+    }
+  });
+
+  // Delete Attendance Record
+  window.deleteAttendance = async function(rfidUid, timestampKey, staffName) {
+    if (!confirm(`Delete attendance record for ${staffName}?\n\nThis action cannot be undone.`)) return;
+
+    try {
+      const recordRef = ref(rtdb, `attendance/${rfidUid}/${timestampKey}`);
+      await remove(recordRef);
+      
+      alert('✅ Attendance record deleted!');
+      processAttendanceData();
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('❌ Error: ' + error.message);
+    }
+  };
+
+  // Filter handlers
+  document.getElementById('filterDate').addEventListener('change', processAttendanceData);
+  document.getElementById('filterStaff').addEventListener('change', processAttendanceData);
+
+  // ===== EVENT DELEGATION FOR BUTTON CLICKS =====
+  document.getElementById('attendanceBody').addEventListener('click', async (e) => {
+    const editBtn = e.target.closest('.btn-edit-attendance');
+    const deleteBtn = e.target.closest('.btn-delete-attendance');
+    const clockOutBtn = e.target.closest('.btn-clock-out');
+
+    if (editBtn) {
+      const rfidUid = editBtn.dataset.rfid;
+      const dateKey = editBtn.dataset.key;
+      const staffName = editBtn.dataset.name;
+      const clockIn = editBtn.dataset.clockin;
+      const clockOut = editBtn.dataset.clockout;
+      
+      editAttendance(rfidUid, dateKey, staffName, clockIn, clockOut);
+    } 
+    else if (deleteBtn) {
+      const rfidUid = deleteBtn.dataset.rfid;
+      const timestampKey = deleteBtn.dataset.key;
+      const staffName = deleteBtn.dataset.name;
+      
+      deleteAttendance(rfidUid, timestampKey, staffName);
+    }
+    else if (clockOutBtn) {
+      const rfidUid = clockOutBtn.dataset.rfid;
+      const timestampKey = clockOutBtn.dataset.key;
+      
+      clockOutStaff(rfidUid, timestampKey);
+    }
+  });
+  document.getElementById('refreshBtn').addEventListener('click', () => {
+    processAttendanceData();
+    alert('Refreshed!');
+  });
+</script>
+</body>
+</html>

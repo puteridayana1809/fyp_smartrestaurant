@@ -1,10 +1,12 @@
 {
   "hosting": {
+    "site": "kedai-bihun-selambak",
     "public": ".",
     "ignore": [
       "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "cashierapp/**",
+      ".firebase/**"
     ]
   }
 }
